@@ -256,7 +256,7 @@ function Login() {
 
                       {/* Forgot Password */}
                       <Link
-                        to="/login"
+                        to="/forgot-password"
                         state={{ openForgotPassword: true }}
                         className="text-xs text-amber-300/70 transition-colors hover:text-amber-200"
                       >

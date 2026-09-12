@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -17,6 +18,10 @@ function App() {
       <Route path="/tasks" element={<div>Tasks</div>} />
       <Route path="/profile" element={<div>Profile</div>} />
       <Route path="/rewards" element={<div>Rewards</div>} />
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
     </Routes>
   );
 }
