@@ -211,14 +211,15 @@ function Profile() {
 
   if (authLoading || (!user && token)) {
     return (
-      <main className="min-h-screen bg-neutral-950 text-white">
+      <main className="min-h-screen bg-neutral-950 text-white" aria-label="Loading profile">
         <Navbar />
 
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="space-y-6">
+          <div className="space-y-6" role="status" aria-live="polite" aria-label="Loading profile information">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              aria-hidden="true"
               className="h-48 animate-pulse rounded-3xl bg-white/[0.04]"
             />
 
@@ -229,12 +230,13 @@ function Profile() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: item * 0.05 }}
+                  aria-hidden="true"
                   className="h-28 animate-pulse rounded-2xl bg-white/[0.03]"
                 />
               ))}
             </div>
 
-            <div className="h-80 animate-pulse rounded-3xl bg-white/[0.03]" />
+            <div className="h-80 animate-pulse rounded-3xl bg-white/[0.03]" aria-hidden="true" />
           </div>
         </div>
       </main>
@@ -246,10 +248,10 @@ function Profile() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
+    <main className="min-h-screen bg-neutral-950 text-white" aria-labelledby="profile-page-title">
       {/* AMBIENT BACKGROUND */}
 
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <motion.div
           animate={{
             scale: [1, 1.08, 1],
@@ -293,7 +295,7 @@ function Profile() {
               Character Profile
             </p>
 
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 id="profile-page-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">
               Adventurer Sheet
             </h1>
 
@@ -323,6 +325,7 @@ function Profile() {
             whileHover={{
               y: -2,
             }}
+            aria-labelledby="profile-character-name"
             className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] transition-shadow duration-500 hover:shadow-[0_20px_70px_rgba(0,0,0,0.18)]"
           >
             <motion.div
@@ -362,6 +365,8 @@ function Profile() {
                       scale: 1.04,
                       rotate: 1,
                     }}
+                    role="img"
+                    aria-label={`${user.name || "Adventurer"} avatar`}
                     className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border border-amber-300/20 bg-amber-300/[0.08] text-4xl font-bold text-amber-200 shadow-[0_0_45px_rgba(252,211,77,0.08)]"
                   >
                     {initials}
@@ -381,6 +386,7 @@ function Profile() {
                         damping: 16,
                         delay: 0.3,
                       }}
+                      aria-hidden="true"
                       className="absolute -bottom-2 -right-2 flex h-9 min-w-9 items-center justify-center rounded-xl border border-neutral-900 bg-amber-300 px-2 text-xs font-bold text-neutral-950"
                     >
                       {currentLevel}
@@ -405,7 +411,7 @@ function Profile() {
                       Adventurer
                     </p>
 
-                    <h2 className="mt-1 text-2xl font-semibold sm:text-3xl">
+                    <h2 id="profile-character-name" className="mt-1 text-2xl font-semibold sm:text-3xl">
                       {user.name || "Adventurer"}
                     </h2>
 
@@ -421,7 +427,7 @@ function Profile() {
                 >
                   <Link
                     to="/tasks"
-                    className="inline-flex w-fit items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 shadow-[0_8px_25px_rgba(252,211,77,0.06)] transition hover:bg-amber-200 hover:shadow-[0_10px_30px_rgba(252,211,77,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                    className="inline-flex w-fit items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 shadow-[0_8px_25px_rgba(252,211,77,0.06)] transition hover:bg-amber-200 hover:shadow-[0_10px_30px_rgba(252,211,77,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
                   >
                     Continue Questing →
                   </Link>
@@ -486,6 +492,7 @@ function Profile() {
                   aria-valuemin="0"
                   aria-valuemax="100"
                   aria-label={`Level progress: ${levelProgress}%`}
+                  aria-valuetext={`${levelProgress}% complete toward Level ${currentLevel + 1}`}
                 >
                   <motion.div
                     initial={{ width: 0 }}
@@ -533,7 +540,7 @@ function Profile() {
 
           {/* OVERVIEW STATS */}
 
-          <section className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <section className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Character overview statistics">
             <ProfileStat
               label="Level"
               value={currentLevel}
@@ -569,7 +576,7 @@ function Profile() {
 
           {/* CHARACTER ATTRIBUTES */}
 
-          <section className="mb-8">
+          <section className="mb-8" aria-labelledby="attributes-title">
             <motion.div
               initial={{
                 opacity: 0,
@@ -592,7 +599,7 @@ function Profile() {
                 Character Build
               </p>
 
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+              <h2 id="attributes-title" className="mt-1 text-2xl font-semibold tracking-tight">
                 Attributes
               </h2>
 
@@ -650,6 +657,7 @@ function Profile() {
                             stiffness: 300,
                             damping: 15,
                           }}
+                          aria-hidden="true"
                           className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/5 text-amber-200"
                         >
                           {attribute.icon}
@@ -709,6 +717,7 @@ function Profile() {
                         aria-valuemin="0"
                         aria-valuemax="100"
                         aria-label={`${attribute.label} growth: ${progress}%`}
+                        aria-valuetext={`${progress}% growth for ${attribute.label}`}
                       >
                         <motion.div
                           initial={{ width: 0 }}
@@ -737,7 +746,7 @@ function Profile() {
 
           {/* STREAK */}
 
-          <section className="mb-8 grid gap-4 lg:grid-cols-2">
+          <section className="mb-8 grid gap-4 lg:grid-cols-2" aria-label="Streak statistics">
             <StreakCard
               title="Current Streak"
               eyebrow="Consistency"
@@ -760,7 +769,7 @@ function Profile() {
 
           {/* INVENTORY */}
 
-          <section className="mb-8">
+          <section className="mb-8" aria-labelledby="inventory-title">
             <motion.div
               initial={{
                 opacity: 0,
@@ -784,7 +793,7 @@ function Profile() {
                   Collection
                 </p>
 
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                <h2 id="inventory-title" className="mt-1 text-2xl font-semibold tracking-tight">
                   Inventory
                 </h2>
 
@@ -1028,6 +1037,7 @@ function Profile() {
             transition={{
               duration: 0.4,
             }}
+            aria-labelledby="character-summary-title"
             className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-white/15 hover:bg-white/[0.04] sm:p-7"
           >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -1036,7 +1046,7 @@ function Profile() {
                   Character Summary
                 </p>
 
-                <h2 className="mt-1 text-lg font-semibold">
+                <h2 id="character-summary-title" className="mt-1 text-lg font-semibold">
                   Keep building your character.
                 </h2>
 
@@ -1111,6 +1121,7 @@ function ProfileStat({
             scale: 1.15,
             rotate: 4,
           }}
+          aria-hidden="true"
           className="text-xs font-bold text-amber-300/60"
         >
           {icon}
@@ -1222,6 +1233,7 @@ function StreakCard({
               stiffness: 300,
               damping: 15,
             }}
+            aria-hidden="true"
             className="text-2xl"
           >
             {icon}

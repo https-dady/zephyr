@@ -220,8 +220,8 @@ function Rewards() {
   const currency = user?.currency || 0;
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+    <main className="min-h-screen bg-neutral-950 text-white" aria-labelledby="rewards-page-title">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <motion.div
           animate={{
             scale: [1, 1.08, 1],
@@ -268,6 +268,7 @@ function Rewards() {
                 </motion.p>
 
                 <motion.h1
+                  id="rewards-page-title"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -325,6 +326,7 @@ function Rewards() {
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
+                  aria-hidden="true"
                   className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-200"
                 >
                   ◈
@@ -389,6 +391,8 @@ function Rewards() {
                   duration: 0.3,
                 }}
                 className="mb-6 overflow-hidden rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3"
+                role="status"
+                aria-live="polite"
               >
                 <div className="flex items-center gap-3">
                   <motion.span
@@ -399,6 +403,7 @@ function Rewards() {
                       stiffness: 400,
                       damping: 15,
                     }}
+                    aria-hidden="true"
                     className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-300"
                   >
                     ✓
@@ -429,6 +434,8 @@ function Rewards() {
                   scale: 0.98,
                 }}
                 className="mb-6 overflow-hidden rounded-2xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3"
+                role="alert"
+                aria-live="assertive"
               >
                 <div className="flex items-center gap-3">
                   <motion.span
@@ -439,6 +446,7 @@ function Rewards() {
                       stiffness: 400,
                       damping: 15,
                     }}
+                    aria-hidden="true"
                     className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-400/10 text-red-300"
                   >
                     !
@@ -467,10 +475,11 @@ function Rewards() {
               duration: 0.35,
               delay: 0.12,
             }}
+            aria-labelledby="reward-filter-title"
             className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center"
           >
             <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-neutral-600">
+              <p id="reward-filter-title" className="text-xs uppercase tracking-[0.16em] text-neutral-600">
                 Browse Rewards
               </p>
 
@@ -506,7 +515,7 @@ function Rewards() {
                       stiffness: 400,
                       damping: 20,
                     }}
-                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
                       isSelected
                         ? "bg-amber-300 text-neutral-950 shadow-[0_0_20px_rgba(252,211,77,0.12)]"
                         : "border border-white/10 bg-white/[0.03] text-neutral-400 hover:border-amber-300/20 hover:text-neutral-200"
@@ -537,6 +546,8 @@ function Rewards() {
                   y: -10,
                 }}
                 className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-5"
+                role="alert"
+                aria-live="assertive"
               >
                 <p className="text-sm text-red-300">
                   {error}
@@ -548,7 +559,7 @@ function Rewards() {
                     fetchRewards();
                     fetchUser();
                   }}
-                  className="mt-3 text-sm font-medium text-amber-300 transition hover:text-amber-200"
+                  className="mt-3 rounded-md px-2 py-1 text-left text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
                 >
                   Try again →
                 </button>
@@ -559,7 +570,7 @@ function Rewards() {
           {/* LOADING */}
 
           {loadingRewards && (
-            <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="status" aria-live="polite" aria-label="Loading rewards">
               {[1, 2, 3, 4, 5, 6].map((item) => (
                 <motion.div
                   key={item}
@@ -576,6 +587,7 @@ function Rewards() {
                     delay: item * 0.04,
                   }}
                   className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]"
+                  aria-hidden="true"
                 >
                   <div className="h-48 animate-pulse bg-white/5" />
 
@@ -612,6 +624,7 @@ function Rewards() {
                     duration: 0.3,
                   }}
                   className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-12 text-center"
+                  role="status"
                 >
                   <motion.div
                     animate={{
@@ -622,6 +635,7 @@ function Rewards() {
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
+                    aria-hidden="true"
                     className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200"
                   >
                     ◈
@@ -645,6 +659,7 @@ function Rewards() {
             filteredRewards.length > 0 && (
               <motion.section
                 layout
+                aria-label="Available rewards"
                 className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
               >
                 <AnimatePresence mode="popLayout">
@@ -662,6 +677,7 @@ function Rewards() {
                     return (
                       <motion.article
                         key={reward._id}
+                        aria-label={`${reward.name}. ${reward.type} reward. Cost ${reward.cost || 0} coins. ${isOwned ? "Already in inventory." : canAfford ? "Available for purchase." : "Not enough coins."}`}
                         layout
                         initial={{
                           opacity: 0,
@@ -711,6 +727,7 @@ function Rewards() {
                           transition={{
                             duration: 0.25,
                           }}
+                          aria-hidden="true"
                           className="pointer-events-none absolute inset-x-0 top-0 h-px bg-amber-300/40"
                         />
 
@@ -729,6 +746,7 @@ function Rewards() {
                             transition={{
                               duration: 0.45,
                             }}
+                            aria-hidden="true"
                             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(252,211,77,0.08),transparent_55%)]"
                           />
 
@@ -743,6 +761,7 @@ function Rewards() {
                               repeat: Infinity,
                               ease: "linear",
                             }}
+                            aria-hidden="true"
                             className="pointer-events-none absolute h-32 w-32 rounded-full border border-amber-300/[0.04]"
                           />
 
@@ -772,6 +791,7 @@ function Rewards() {
                                 stiffness: 250,
                                 damping: 15,
                               }}
+                              aria-hidden="true"
                               className={`relative flex h-24 w-24 items-center justify-center rounded-3xl border text-4xl shadow-[0_0_50px_rgba(252,211,77,0.08)] ${
                                 isOwned
                                   ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-300"
@@ -824,7 +844,7 @@ function Rewards() {
                                     damping: 15,
                                   }}
                                 >
-                                  ✓
+                                  <span aria-hidden="true">✓</span>
                                 </motion.span>
 
                                 Owned
@@ -864,6 +884,7 @@ function Rewards() {
                                     scale: 1.12,
                                     rotate: 5,
                                   }}
+                                  aria-hidden="true"
                                   className="text-lg text-amber-300"
                                 >
                                   ◈
@@ -948,6 +969,17 @@ function Rewards() {
                               isPurchasing ||
                               loadingUser
                             }
+                            aria-disabled={isOwned || !canAfford || isPurchasing || loadingUser}
+                            aria-busy={isPurchasing}
+                            aria-label={
+                              isOwned
+                                ? `${reward.name} is already in inventory`
+                                : isPurchasing
+                                ? `Purchasing ${reward.name}`
+                                : !canAfford
+                                ? `Cannot purchase ${reward.name}. Need more coins.`
+                                : `Purchase ${reward.name} for ${reward.cost || 0} coins`
+                            }
                             whileHover={
                               !isOwned &&
                               canAfford &&
@@ -971,7 +1003,7 @@ function Rewards() {
                               stiffness: 400,
                               damping: 20,
                             }}
-                            className={`relative mt-5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                            className={`relative mt-5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
                               isOwned
                                 ? "cursor-default border border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-300"
                                 : !canAfford
@@ -1013,6 +1045,7 @@ function Rewards() {
                                       repeat: Infinity,
                                       ease: "linear",
                                     }}
+                                    aria-hidden="true"
                                     className="h-4 w-4 rounded-full border-2 border-neutral-950/30 border-t-neutral-950"
                                   />
 
@@ -1085,10 +1118,11 @@ function Rewards() {
                 delay: 0.2,
               }}
               className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6"
+              aria-labelledby="reward-footer-title"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-medium text-neutral-300">
+                  <p id="reward-footer-title" className="text-sm font-medium text-neutral-300">
                     Earn more currency through quests.
                   </p>
 
@@ -1107,7 +1141,7 @@ function Rewards() {
                   whileTap={{
                     scale: 0.97,
                   }}
-                  className="w-fit text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                  className="w-fit rounded-md px-2 py-1 text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
                 >
                   Go to Quests →
                 </motion.button>

@@ -427,8 +427,8 @@ function Tasks() {
       : 0;
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+    <main className="min-h-screen bg-neutral-950 text-white" aria-labelledby="tasks-page-title">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl" />
         <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl" />
       </div>
@@ -456,7 +456,7 @@ function Tasks() {
 
             <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h1 id="tasks-page-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">
                   Your Quests
                 </h1>
 
@@ -497,7 +497,7 @@ function Tasks() {
                 role="status"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-300">
+                  <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-300">
                     ✓
                   </span>
 
@@ -522,7 +522,7 @@ function Tasks() {
                   <button
                     type="button"
                     onClick={() => setError("")}
-                    className="text-xs text-neutral-500 hover:text-white"
+                    className="rounded-md px-2 py-1 text-xs text-neutral-500 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
                   >
                     Dismiss
                   </button>
@@ -533,6 +533,8 @@ function Tasks() {
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
             <motion.section
+              aria-labelledby="quest-list-title"
+              aria-busy={loadingTasks}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.08 }}
@@ -543,7 +545,7 @@ function Tasks() {
                   Your journey
                 </p>
 
-                <h2 className="mt-1 text-xl font-semibold">
+                <h2 id="quest-list-title" className="mt-1 text-xl font-semibold">
                   {activeTasks.length > 0
                     ? "Active Quests"
                     : "Quest Board"}
@@ -551,11 +553,13 @@ function Tasks() {
               </div>
 
               {loadingTasks ? (
-                <div className="space-y-4" aria-label="Loading quests">
+                <div className="space-y-4" role="status" aria-live="polite" aria-label="Loading quests">
+
                   {[1, 2, 3].map((item) => (
                     <div
                       key={item}
                       className="h-32 animate-pulse rounded-2xl bg-white/[0.04]"
+                      aria-hidden="true"
                     />
                   ))}
                 </div>
@@ -580,8 +584,8 @@ function Tasks() {
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-3xl border border-emerald-300/10 bg-emerald-300/[0.03] p-8 text-center">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-300/10 text-2xl text-emerald-300">
+                    <div className="rounded-3xl border border-emerald-300/10 bg-emerald-300/[0.03] p-8 text-center" role="status">
+                      <div aria-hidden="true" className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-300/10 text-2xl text-emerald-300">
                         ✓
                       </div>
 
@@ -597,13 +601,13 @@ function Tasks() {
                   )}
 
                   {completedTasks.length > 0 && (
-                    <section className="mt-10">
+                    <section className="mt-10" aria-labelledby="completed-quests-title">
                       <div className="mb-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
                           History
                         </p>
 
-                        <h2 className="mt-1 text-xl font-semibold text-neutral-300">
+                        <h2 id="completed-quests-title" className="mt-1 text-xl font-semibold text-neutral-300">
                           Completed Quests
                         </h2>
                       </div>
@@ -639,7 +643,7 @@ function Tasks() {
                 className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
               >
                 <div className="mb-6">
-                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10 text-xl text-amber-300">
+                  <div aria-hidden="true" className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10 text-xl text-amber-300">
                     {editingTask ? "✎" : "+"}
                   </div>
 
@@ -654,7 +658,10 @@ function Tasks() {
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-5" noValidate aria-describedby={formError ? "task-form-error" : undefined} aria-busy={submitting}>
+                  {submitting && (
+                    <span className="sr-only" role="status" aria-live="polite">Saving quest...</span>
+                  )}
                   <div>
                     <label
                       htmlFor="task-title"
@@ -768,7 +775,9 @@ function Tasks() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex-1 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-disabled={submitting}
+                       aria-busy={submitting}
+                       className="flex-1 rounded-xl bg-amber-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {submitting
                         ? "Saving..."
@@ -782,7 +791,7 @@ function Tasks() {
                         type="button"
                         onClick={handleCancelEdit}
                         disabled={submitting}
-                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                        className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-50"
                       >
                         Cancel
                       </button>
@@ -791,7 +800,7 @@ function Tasks() {
                 </form>
               </motion.section>
 
-              <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5" aria-labelledby="quest-completion-title">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-neutral-600">
@@ -857,6 +866,7 @@ function TaskCard({
 
   return (
     <motion.article
+      aria-label={`${completed ? "Completed quest" : "Active quest"}: ${task.title}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -903,7 +913,7 @@ function TaskCard({
             }`}
           >
             {isCompleting ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300/30 border-t-amber-300" />
+              <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300/30 border-t-amber-300" />
             ) : completed ? (
               "✓"
             ) : (
@@ -976,7 +986,8 @@ function TaskCard({
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             disabled={isDeleting}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-amber-300/20 hover:text-amber-200 disabled:opacity-50"
+            aria-label={`Edit quest: ${task.title}`}
+             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-amber-300/20 hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-50"
           >
             Edit
           </motion.button>
@@ -987,7 +998,8 @@ function TaskCard({
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.96 }}
             disabled={isDeleting}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-red-300/20 hover:text-red-300 disabled:opacity-50"
+            aria-label={`Delete quest: ${task.title}`}
+             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-red-300/20 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 disabled:opacity-50"
           >
             {isDeleting ? "..." : "Delete"}
           </motion.button>
@@ -1004,7 +1016,7 @@ function EmptyQuests() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: TASKS_EASE }}
       className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-2xl text-amber-300">
+      <div aria-hidden="true" className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-2xl text-amber-300">
         ✦
       </div>
 

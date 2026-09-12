@@ -58,12 +58,18 @@ const CTA_HIGHLIGHTS = [
 
 function Home() {
   return (
-    <main className="min-h-screen overflow-hidden bg-neutral-950 text-white">
+    <main
+      aria-labelledby="home-page-title"
+      className="relative min-h-screen overflow-hidden bg-neutral-950 text-white"
+    >
       {/* =========================================================
           BACKGROUND ATMOSPHERE
       ========================================================== */}
 
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
         <motion.div
           animate={{
             scale: [1, 1.08, 1],
@@ -108,7 +114,7 @@ function Home() {
           HERO
       ========================================================== */}
 
-      <section className="relative">
+      <section className="relative z-10">
         <Container className="flex min-h-[88vh] items-center py-20 sm:py-24 lg:py-28">
           <div className="grid w-full items-center gap-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20">
             {/* LEFT CONTENT */}
@@ -148,6 +154,7 @@ function Home() {
                 className="mb-7 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/5 px-4 py-2 text-xs font-medium tracking-wide text-amber-200"
               >
                 <motion.span
+                  aria-hidden="true"
                   animate={{
                     scale: [1, 1.35, 1],
                     opacity: [0.65, 1, 0.65],
@@ -164,6 +171,7 @@ function Home() {
               </motion.div>
 
               <motion.h1
+                id="home-page-title"
                 initial={{
                   opacity: 0,
                   y: 14,
@@ -261,6 +269,7 @@ function Home() {
               className="relative mx-auto w-full max-w-xl"
             >
               <motion.div
+                aria-hidden="true"
                 animate={{
                   scale: [1, 1.08, 1],
                   opacity: [0.55, 0.8, 0.55],
@@ -281,6 +290,7 @@ function Home() {
                   duration: 0.3,
                   ease: HERO_EASE,
                 }}
+                aria-labelledby="character-preview-title"
                 className="relative rounded-[30px] border border-white/10 bg-neutral-900/80 p-6 shadow-2xl backdrop-blur-xl transition-shadow duration-500 hover:border-white/15 hover:shadow-[0_25px_80px_rgba(0,0,0,0.28)] sm:p-8"
               >
                 {/* Header */}
@@ -291,7 +301,10 @@ function Home() {
                       RPG Preview
                     </p>
 
-                    <h2 className="mt-2 text-2xl font-semibold text-white">
+                    <h2
+                      id="character-preview-title"
+                      className="mt-2 text-2xl font-semibold text-white"
+                    >
                       Your Character
                     </h2>
 
@@ -342,6 +355,7 @@ function Home() {
                 >
                   <div className="flex items-center gap-5">
                     <motion.div
+                      aria-hidden="true"
                       animate={{
                         y: [0, -3, 0],
                       }}
@@ -381,7 +395,14 @@ function Home() {
                       </span>
                     </div>
 
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-800">
+                    <div
+                      className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-800"
+                      role="progressbar"
+                      aria-label="Character progression"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="34"
+                    >
                       <motion.div
                         initial={{
                           width: 0,
@@ -397,6 +418,7 @@ function Home() {
                         className="relative h-full rounded-full bg-amber-300"
                       >
                         <motion.div
+                          aria-hidden="true"
                           animate={{
                             x: ["-100%", "300%"],
                           }}
@@ -415,7 +437,10 @@ function Home() {
 
                 {/* RPG Concepts */}
 
-                <div className="mt-5 grid grid-cols-2 gap-3">
+                <div
+                  className="mt-5 grid grid-cols-2 gap-3"
+                  aria-label="RPG concepts"
+                >
                   {RPG_CONCEPTS.map((item, index) => (
                     <motion.div
                       key={item.title}
@@ -471,6 +496,7 @@ function Home() {
               >
                 <div className="flex items-center gap-3">
                   <motion.div
+                    aria-hidden="true"
                     animate={{
                       scale: [1, 1.06, 1],
                     }}
@@ -504,7 +530,10 @@ function Home() {
           HOW IT WORKS
       ========================================================== */}
 
-      <section className="border-y border-white/6 bg-white/[0.015] py-24 sm:py-28">
+      <section
+        aria-labelledby="how-it-works-title"
+        className="border-y border-white/6 bg-white/[0.015] py-24 sm:py-28"
+      >
         <Container>
           <motion.div
             initial={{
@@ -529,7 +558,10 @@ function Home() {
               The Loop
             </p>
 
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2
+              id="how-it-works-title"
+              className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl"
+            >
               Real life becomes your progression system.
             </h2>
 
@@ -579,6 +611,7 @@ function Home() {
                   </motion.span>
 
                   <motion.span
+                    aria-hidden="true"
                     initial={{
                       width: 48,
                     }}
@@ -606,8 +639,12 @@ function Home() {
           FINAL CTA
       ========================================================== */}
 
-      <section className="relative overflow-hidden py-28 sm:py-32">
+      <section
+        aria-labelledby="final-cta-title"
+        className="relative overflow-hidden py-28 sm:py-32"
+      >
         <motion.div
+          aria-hidden="true"
           animate={{
             scale: [1, 1.08, 1],
             opacity: [0.45, 0.7, 0.45],
@@ -645,6 +682,7 @@ function Home() {
             {/* Decorative glows */}
 
             <motion.div
+              aria-hidden="true"
               animate={{
                 scale: [1, 1.12, 1],
                 opacity: [0.35, 0.6, 0.35],
@@ -658,6 +696,7 @@ function Home() {
             />
 
             <motion.div
+              aria-hidden="true"
               animate={{
                 scale: [1.08, 1, 1.08],
                 opacity: [0.3, 0.55, 0.3],
@@ -672,6 +711,7 @@ function Home() {
 
             <div className="relative mx-auto max-w-3xl">
               <motion.div
+                aria-hidden="true"
                 animate={{
                   y: [0, -4, 0],
                 }}
@@ -693,7 +733,10 @@ function Home() {
                 Your journey starts here
               </p>
 
-              <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+              <h2
+                id="final-cta-title"
+                className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl"
+              >
                 Make progress feel
                 <span className="block text-amber-300">
                   worth coming back to.

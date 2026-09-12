@@ -372,7 +372,10 @@ function Dashboard() {
   };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
+    <main
+      className="min-h-screen bg-neutral-950 text-white"
+      aria-labelledby="dashboard-title"
+    >
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl" />
 
@@ -396,7 +399,10 @@ function Dashboard() {
 
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                <h1
+                  id="dashboard-title"
+                  className="text-3xl font-semibold tracking-tight sm:text-4xl"
+                >
                   Welcome back
                   {user?.name
                     ? `, ${user.name}`
@@ -453,14 +459,18 @@ function Dashboard() {
               variants={dashboardReveal}
               className="mb-8 rounded-2xl border border-red-400/20 bg-red-400/5 p-5"
             >
-              <p className="text-sm text-red-300">
+              <p
+                className="text-sm text-red-300"
+                role="alert"
+                aria-live="assertive"
+              >
                 {tasksError}
               </p>
 
               <button
                 type="button"
                 onClick={fetchTasks}
-                className="mt-3 text-sm font-medium text-amber-300 hover:text-amber-200"
+                className="mt-3 rounded-md text-sm font-medium text-amber-300 transition hover:text-amber-200 focus-visible:outline-2 focus-visible:outline-amber-300 focus-visible:outline-offset-3"
               >
                 Try again →
               </button>
@@ -487,7 +497,10 @@ function Dashboard() {
               <div className="relative p-6 sm:p-8">
                 <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-2xl font-bold text-amber-200">
+                    <div
+                      aria-hidden="true"
+                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-2xl font-bold text-amber-200"
+                    >
                       {user?.name
                         ?.trim()
                         ?.charAt(0)
@@ -511,8 +524,11 @@ function Dashboard() {
                   </div>
 
                   <div className="flex w-fit items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10">
-                      <span className="text-sm font-bold text-amber-200">
+                    <div
+                      aria-hidden="true"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10"
+                    >
+                      <span aria-hidden="true" className="text-sm font-bold text-amber-200">
                         {String(
                           currentLevel
                         ).padStart(2, "0")}
@@ -671,7 +687,10 @@ function Dashboard() {
                   Character Build
                 </p>
 
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                <h2
+                  id="attributes-title"
+                  className="mt-1 text-2xl font-semibold tracking-tight"
+                >
                   Attributes
                 </h2>
 
@@ -732,7 +751,10 @@ function Dashboard() {
                       <div className="relative">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200">
+                            <div
+                              aria-hidden="true"
+                              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200"
+                            >
                               {attribute.icon}
                             </div>
 
@@ -858,7 +880,10 @@ function Dashboard() {
                 Consistency
               </p>
 
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+              <h2
+                id="streak-title"
+                className="mt-1 text-2xl font-semibold tracking-tight"
+              >
                 Streak
               </h2>
 
@@ -888,7 +913,10 @@ function Dashboard() {
                 <div className="relative">
                   <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-3xl">
+                      <div
+                        aria-hidden="true"
+                        className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-3xl"
+                      >
                         🔥
                       </div>
 
@@ -1038,7 +1066,10 @@ function Dashboard() {
                     </h3>
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200">
+                  <div
+                    aria-hidden="true"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200"
+                  >
                     🏆
                   </div>
                 </div>
@@ -1145,7 +1176,10 @@ function Dashboard() {
                   Daily Progress
                 </p>
 
-                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                <h2
+                  id="quest-progress-title"
+                  className="mt-1 text-2xl font-semibold tracking-tight"
+                >
                   Quest Progress
                 </h2>
 
@@ -1178,7 +1212,10 @@ function Dashboard() {
             >
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200">
+                  <div
+                    aria-hidden="true"
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200"
+                  >
                     ✓
                   </div>
 
@@ -1249,7 +1286,10 @@ function Dashboard() {
                   Global Rankings
                 </p>
 
-                <h2 className="mt-1 text-xl font-semibold">
+                <h2
+                  id="leaderboard-title"
+                  className="mt-1 text-xl font-semibold"
+                >
                   Leaderboard
                 </h2>
 
@@ -1270,6 +1310,7 @@ function Dashboard() {
                   <select
                     id="leaderboard-metric"
                     value={leaderboardMetric}
+                    aria-describedby="leaderboard-controls-help"
                     onChange={(event) =>
                       setLeaderboardMetric(
                         event.target.value
@@ -1302,6 +1343,7 @@ function Dashboard() {
                   <select
                     id="leaderboard-limit"
                     value={leaderboardLimit}
+                    aria-describedby="leaderboard-controls-help"
                     onChange={(event) =>
                       setLeaderboardLimit(
                         Number(
@@ -1325,6 +1367,9 @@ function Dashboard() {
                   </select>
                 </div>
               </div>
+              <p id="leaderboard-controls-help" className="sr-only">
+                Choose the ranking metric and the number of top adventurers to display.
+              </p>
             </div>
 
             <div className="mt-6 flex flex-col justify-between gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/5 p-4 sm:flex-row sm:items-center">
@@ -1346,7 +1391,12 @@ function Dashboard() {
             </div>
 
             {loadingLeaderboard && (
-              <div className="mt-5 space-y-3">
+              <div
+                className="mt-5 space-y-3"
+                role="status"
+                aria-live="polite"
+                aria-label="Loading leaderboard"
+              >
                 {[1, 2, 3, 4, 5].map(
                   (item) => (
                     <div
@@ -1361,14 +1411,18 @@ function Dashboard() {
             {leaderboardError &&
               !loadingLeaderboard && (
                 <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/5 p-4">
-                  <p className="text-sm text-red-300">
+                  <p
+                    className="text-sm text-red-300"
+                    role="alert"
+                    aria-live="assertive"
+                  >
                     {leaderboardError}
                   </p>
 
                   <button
                     type="button"
                     onClick={fetchLeaderboard}
-                    className="mt-2 text-sm font-medium text-amber-300 hover:text-amber-200"
+                    className="mt-2 rounded-md text-sm font-medium text-amber-300 transition hover:text-amber-200 focus-visible:outline-2 focus-visible:outline-amber-300 focus-visible:outline-offset-3"
                   >
                     Try again →
                   </button>
@@ -1378,7 +1432,11 @@ function Dashboard() {
             {!loadingLeaderboard &&
               !leaderboardError &&
               leaderboard.length === 0 && (
-                <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center">
+                <div
+                  className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center"
+                  role="status"
+                  aria-live="polite"
+                >
                   <p className="text-sm text-neutral-500">
                     No ranking data available yet.
                   </p>
@@ -1388,15 +1446,24 @@ function Dashboard() {
             {!loadingLeaderboard &&
               !leaderboardError &&
               leaderboard.length > 0 && (
-                <div className="mt-5 overflow-hidden rounded-2xl border border-white/5">
-                  <div className="hidden grid-cols-[70px_1fr_120px_150px] border-b border-white/5 bg-black/20 px-5 py-3 text-xs uppercase tracking-wider text-neutral-600 sm:grid">
-                    <span>Rank</span>
+                <div
+                  className="mt-5 overflow-hidden rounded-2xl border border-white/5"
+                  role="table"
+                  aria-label={`Global leaderboard ranked by ${selectedMetricLabel}`}
+                  aria-rowcount={leaderboard.length + 1}
+                >
+                  <div
+                    className="hidden grid-cols-[70px_1fr_120px_150px] border-b border-white/5 bg-black/20 px-5 py-3 text-xs uppercase tracking-wider text-neutral-600 sm:grid"
+                    role="row"
+                    aria-rowindex="1"
+                  >
+                    <span role="columnheader">Rank</span>
 
-                    <span>Adventurer</span>
+                    <span role="columnheader">Adventurer</span>
 
-                    <span>Level</span>
+                    <span role="columnheader">Level</span>
 
-                    <span className="text-right">
+                    <span role="columnheader" className="text-right">
                       {selectedMetricLabel}
                     </span>
                   </div>
@@ -1506,7 +1573,10 @@ function StatCard({
           {label}
         </p>
 
-        <span className="text-sm text-amber-300/70">
+        <span
+          aria-hidden="true"
+          className="text-sm text-amber-300/70"
+        >
           {icon}
         </span>
       </div>
@@ -1532,13 +1602,16 @@ function LeaderboardRow({
 
   return (
     <div
+      role="row"
+      aria-rowindex={player.rank + 1}
+      aria-label={`Rank ${player.rank}, ${player.name}, Level ${player.level}, ${metricValue}`}
       className={`grid gap-3 px-4 py-4 transition sm:grid-cols-[70px_1fr_120px_150px] sm:items-center sm:px-5 ${
         isTopThree
           ? "bg-amber-300/[0.025]"
           : "hover:bg-white/[0.025]"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div role="cell" className="flex items-center gap-3">
         <span
           className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${
             player.rank === 1
@@ -1558,7 +1631,7 @@ function LeaderboardRow({
         </span>
       </div>
 
-      <div className="min-w-0">
+      <div role="cell" className="min-w-0">
         <p className="truncate text-sm font-medium text-neutral-200">
           {player.name}
         </p>
@@ -1568,11 +1641,11 @@ function LeaderboardRow({
         </p>
       </div>
 
-      <div className="hidden text-sm text-neutral-400 sm:block">
+      <div role="cell" className="hidden text-sm text-neutral-400 sm:block">
         Level {player.level}
       </div>
 
-      <div className="hidden text-right text-sm font-medium text-amber-200 sm:block">
+      <div role="cell" className="hidden text-right text-sm font-medium text-amber-200 sm:block">
         {metricValue}
       </div>
     </div>

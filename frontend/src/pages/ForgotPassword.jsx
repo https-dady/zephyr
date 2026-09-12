@@ -271,12 +271,6 @@ function ForgotPassword() {
           headers: {
             "Content-Type": "application/json",
           },
-
-          /*
-           * IMPORTANT:
-           * Backend expects `newPassword`,
-           * not `password`.
-           */
           body: JSON.stringify({
             email: email.trim().toLowerCase(),
             otp: otp.trim(),
@@ -294,12 +288,6 @@ function ForgotPassword() {
         );
       }
 
-      /*
-       * Password reset is successful.
-       *
-       * Redirect immediately to login.
-       * No alert/popup and no delayed timeout.
-       */
       navigate("/login", {
         replace: true,
         state: {
@@ -371,7 +359,11 @@ function ForgotPassword() {
           >
             <div className="max-w-md">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-300/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-amber-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.8)]" />
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.8)]"
+                  aria-hidden="true"
+                />
+
                 Account Recovery
               </div>
 
@@ -429,7 +421,10 @@ function ForgotPassword() {
                     }}
                     className="flex gap-4 rounded-2xl border border-white/7 bg-white/[0.025] p-4"
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/10 bg-amber-300/5 text-xs font-medium text-amber-300">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/10 bg-amber-300/5 text-xs font-medium text-amber-300"
+                      aria-hidden="true"
+                    >
                       {item.number}
                     </div>
 
@@ -487,6 +482,7 @@ function ForgotPassword() {
                     }}
                     whileTap={{ scale: 0.96 }}
                     className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-lg text-amber-300 shadow-[0_0_30px_rgba(252,211,77,0.07)]"
+                    aria-hidden="true"
                   >
                     {step === 1 && "↗"}
                     {step === 2 && "#"}
@@ -515,15 +511,28 @@ function ForgotPassword() {
                     STEP INDICATOR
                 ================================================== */}
 
-                <div className="mt-7 grid grid-cols-3 gap-2">
+                <div
+                  className="mt-7 grid grid-cols-3 gap-2"
+                  aria-label={`Account recovery step ${step} of 3`}
+                >
                   {["Email", "Verify", "Reset"].map(
                     (label, index) => {
                       const stepNumber = index + 1;
 
                       return (
-                        <div key={label}>
+                        <div
+                          key={label}
+                          aria-current={
+                            stepNumber === step
+                              ? "step"
+                              : undefined
+                          }
+                        >
                           <motion.div
-                            initial={{ scaleX: 0.7, opacity: 0.6 }}
+                            initial={{
+                              scaleX: 0.7,
+                              opacity: 0.6,
+                            }}
                             animate={{
                               scaleX: 1,
                               opacity: 1,
@@ -537,6 +546,7 @@ function ForgotPassword() {
                                 ? "bg-amber-300"
                                 : "bg-neutral-800"
                             }`}
+                            aria-hidden="true"
                           />
 
                           <p
@@ -570,6 +580,8 @@ function ForgotPassword() {
                     }}
                     className="mt-6 rounded-2xl border border-red-400/15 bg-red-400/5 px-4 py-3"
                     role="alert"
+                    aria-live="assertive"
+                    id="forgot-error"
                   >
                     <p className="text-sm leading-6 text-red-300">
                       {error}
@@ -589,6 +601,8 @@ function ForgotPassword() {
                     }}
                     className="mt-6 rounded-2xl border border-amber-300/15 bg-amber-300/5 px-4 py-3"
                     role="status"
+                    aria-live="polite"
+                    id="forgot-success"
                   >
                     <p className="text-sm leading-6 text-amber-200">
                       {success}
@@ -604,6 +618,7 @@ function ForgotPassword() {
                   <form
                     onSubmit={handleEmailSubmit}
                     className="mt-7 space-y-5"
+                    noValidate
                   >
                     <div>
                       <label
@@ -619,6 +634,7 @@ function ForgotPassword() {
                           transition: CARD_SPRING,
                         }}
                         id="forgot-email"
+                        name="email"
                         type="email"
                         autoComplete="email"
                         value={email}
@@ -628,6 +644,15 @@ function ForgotPassword() {
                         }}
                         placeholder="you@example.com"
                         required
+                        aria-required="true"
+                        aria-invalid={Boolean(error)}
+                        aria-describedby={
+                          error
+                            ? "forgot-error"
+                            : success
+                            ? "forgot-success"
+                            : undefined
+                        }
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3.5 text-sm text-white outline-none transition-all duration-200 placeholder:text-neutral-700 focus:border-amber-300/40 focus:bg-black/40 focus:ring-2 focus:ring-amber-300/10"
                       />
                     </div>
@@ -635,26 +660,49 @@ function ForgotPassword() {
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      whileHover={isLoading ? undefined : {
-                        y: -2,
-                        scale: 1.01,
-                        transition: BUTTON_SPRING,
-                      }}
-                      whileTap={isLoading ? undefined : {
-                        scale: 0.98,
-                      }}
+                      aria-disabled={isLoading}
+                      aria-busy={isLoading}
+                      whileHover={
+                        isLoading
+                          ? undefined
+                          : {
+                              y: -2,
+                              scale: 1.01,
+                              transition: BUTTON_SPRING,
+                            }
+                      }
+                      whileTap={
+                        isLoading
+                          ? undefined
+                          : {
+                              scale: 0.98,
+                            }
+                      }
                       className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-neutral-950 transition-all duration-200 hover:bg-amber-200 hover:shadow-[0_0_32px_rgba(252,211,77,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
                         <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950" />
-                          Sending OTP...
+                          <span
+                            className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950"
+                            aria-hidden="true"
+                          />
+
+                          <span>
+                            Sending OTP...
+                          </span>
+
+                          <span className="sr-only">
+                            Sending reset OTP in progress
+                          </span>
                         </>
                       ) : (
                         <>
                           Send Reset OTP
 
-                          <span className="transition-transform duration-200 group-hover:translate-x-1">
+                          <span
+                            className="transition-transform duration-200 group-hover:translate-x-1"
+                            aria-hidden="true"
+                          >
                             →
                           </span>
                         </>
@@ -671,6 +719,7 @@ function ForgotPassword() {
                   <form
                     onSubmit={handleOtpSubmit}
                     className="mt-7 space-y-5"
+                    noValidate
                   >
                     <div>
                       <label
@@ -686,6 +735,7 @@ function ForgotPassword() {
                           transition: CARD_SPRING,
                         }}
                         id="reset-otp"
+                        name="otp"
                         type="text"
                         inputMode="numeric"
                         autoComplete="one-time-code"
@@ -703,8 +753,27 @@ function ForgotPassword() {
                         }}
                         placeholder="Enter your OTP"
                         required
+                        aria-required="true"
+                        aria-invalid={Boolean(
+                          error && otp.length > 0
+                        )}
+                        aria-describedby={
+                          error
+                            ? "forgot-error reset-otp-hint"
+                            : success
+                            ? "forgot-success reset-otp-hint"
+                            : "reset-otp-hint"
+                        }
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-4 text-center text-lg font-semibold tracking-[0.35em] text-white outline-none transition-all duration-200 placeholder:text-neutral-700 placeholder:tracking-normal focus:border-amber-300/40 focus:bg-black/40 focus:ring-2 focus:ring-amber-300/10"
                       />
+
+                      <p
+                        id="reset-otp-hint"
+                        className="sr-only"
+                      >
+                        Enter the 6-digit reset code sent to
+                        your registered email address.
+                      </p>
                     </div>
 
                     <p className="text-center text-xs leading-5 text-neutral-700">
@@ -717,26 +786,49 @@ function ForgotPassword() {
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      whileHover={isLoading ? undefined : {
-                        y: -2,
-                        scale: 1.01,
-                        transition: BUTTON_SPRING,
-                      }}
-                      whileTap={isLoading ? undefined : {
-                        scale: 0.98,
-                      }}
+                      aria-disabled={isLoading}
+                      aria-busy={isLoading}
+                      whileHover={
+                        isLoading
+                          ? undefined
+                          : {
+                              y: -2,
+                              scale: 1.01,
+                              transition: BUTTON_SPRING,
+                            }
+                      }
+                      whileTap={
+                        isLoading
+                          ? undefined
+                          : {
+                              scale: 0.98,
+                            }
+                      }
                       className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-neutral-950 transition-all duration-200 hover:bg-amber-200 hover:shadow-[0_0_32px_rgba(252,211,77,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
                         <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950" />
-                          Verifying...
+                          <span
+                            className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950"
+                            aria-hidden="true"
+                          />
+
+                          <span>
+                            Verifying...
+                          </span>
+
+                          <span className="sr-only">
+                            OTP verification in progress
+                          </span>
                         </>
                       ) : (
                         <>
                           Verify OTP
 
-                          <span className="transition-transform duration-200 group-hover:translate-x-1">
+                          <span
+                            className="transition-transform duration-200 group-hover:translate-x-1"
+                            aria-hidden="true"
+                          >
                             →
                           </span>
                         </>
@@ -745,7 +837,10 @@ function ForgotPassword() {
 
                     {/* Resend OTP */}
 
-                    <div className="flex items-center justify-center gap-2 text-xs">
+                    <div
+                      className="flex items-center justify-center gap-2 text-xs"
+                      aria-live="polite"
+                    >
                       <span className="text-neutral-700">
                         Didn't receive the code?
                       </span>
@@ -753,15 +848,25 @@ function ForgotPassword() {
                       <motion.button
                         type="button"
                         onClick={handleResendOtp}
+                        aria-disabled={
+                          isLoading ||
+                          resendCooldown > 0
+                        }
+                        aria-busy={isLoading}
                         whileHover={
                           isLoading || resendCooldown > 0
                             ? undefined
-                            : { y: -1, transition: BUTTON_SPRING }
+                            : {
+                                y: -1,
+                                transition: BUTTON_SPRING,
+                              }
                         }
                         whileTap={
                           isLoading || resendCooldown > 0
                             ? undefined
-                            : { scale: 0.97 }
+                            : {
+                                scale: 0.97,
+                              }
                         }
                         disabled={
                           isLoading ||
@@ -785,6 +890,7 @@ function ForgotPassword() {
                   <form
                     onSubmit={handlePasswordSubmit}
                     className="mt-7 space-y-5"
+                    noValidate
                   >
                     <div>
                       <label
@@ -808,8 +914,27 @@ function ForgotPassword() {
                         placeholder="Create a new password"
                         required
                         minLength={6}
+                        aria-required="true"
+                        aria-invalid={Boolean(
+                          error &&
+                            passwordData.password.length > 0
+                        )}
+                        aria-describedby={
+                          error
+                            ? "forgot-error new-password-hint"
+                            : success
+                            ? "forgot-success new-password-hint"
+                            : "new-password-hint"
+                        }
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3.5 text-sm text-white outline-none transition-all duration-200 placeholder:text-neutral-700 focus:border-amber-300/40 focus:bg-black/40 focus:ring-2 focus:ring-amber-300/10"
                       />
+
+                      <p
+                        id="new-password-hint"
+                        className="mt-2 text-[11px] text-neutral-700"
+                      >
+                        Use at least 6 characters.
+                      </p>
                     </div>
 
                     <div>
@@ -836,38 +961,77 @@ function ForgotPassword() {
                         placeholder="Enter the password again"
                         required
                         minLength={6}
+                        aria-required="true"
+                        aria-invalid={Boolean(
+                          error &&
+                            passwordData.confirmPassword
+                              .length > 0
+                        )}
+                        aria-describedby={
+                          error
+                            ? "forgot-error confirm-password-hint"
+                            : success
+                            ? "forgot-success confirm-password-hint"
+                            : "confirm-password-hint"
+                        }
                         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3.5 text-sm text-white outline-none transition-all duration-200 placeholder:text-neutral-700 focus:border-amber-300/40 focus:bg-black/40 focus:ring-2 focus:ring-amber-300/10"
                       />
-                    </div>
 
-                    <p className="text-[11px] text-neutral-700">
-                      Password must be at least 6 characters
-                      long.
-                    </p>
+                      <p
+                        id="confirm-password-hint"
+                        className="sr-only"
+                      >
+                        Re-enter the same password to confirm
+                        your new password.
+                      </p>
+                    </div>
 
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      whileHover={isLoading ? undefined : {
-                        y: -2,
-                        scale: 1.01,
-                        transition: BUTTON_SPRING,
-                      }}
-                      whileTap={isLoading ? undefined : {
-                        scale: 0.98,
-                      }}
+                      aria-disabled={isLoading}
+                      aria-busy={isLoading}
+                      whileHover={
+                        isLoading
+                          ? undefined
+                          : {
+                              y: -2,
+                              scale: 1.01,
+                              transition: BUTTON_SPRING,
+                            }
+                      }
+                      whileTap={
+                        isLoading
+                          ? undefined
+                          : {
+                              scale: 0.98,
+                            }
+                      }
                       className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-neutral-950 transition-all duration-200 hover:bg-amber-200 hover:shadow-[0_0_32px_rgba(252,211,77,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
                         <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950" />
-                          Resetting Password...
+                          <span
+                            className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950"
+                            aria-hidden="true"
+                          />
+
+                          <span>
+                            Resetting Password...
+                          </span>
+
+                          <span className="sr-only">
+                            Password reset in progress
+                          </span>
                         </>
                       ) : (
                         <>
                           Reset Password
 
-                          <span className="transition-transform duration-200 group-hover:translate-x-1">
+                          <span
+                            className="transition-transform duration-200 group-hover:translate-x-1"
+                            aria-hidden="true"
+                          >
                             →
                           </span>
                         </>
@@ -881,11 +1045,17 @@ function ForgotPassword() {
                 <motion.button
                   type="button"
                   onClick={goBackToLogin}
-                  whileHover={{ y: -1, transition: BUTTON_SPRING }}
-                  whileTap={{ scale: 0.98 }}
-                  className="mt-6 flex w-full items-center justify-center gap-2 text-xs text-neutral-600 transition-colors hover:text-amber-300"
+                  aria-label="Back to Login"
+                  whileHover={{
+                    y: -1,
+                    transition: BUTTON_SPRING,
+                  }}
+                  whileTap={{
+                    scale: 0.98,
+                  }}
+                  className="mt-6 flex w-full items-center justify-center gap-2 text-xs text-neutral-600 transition-colors hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900"
                 >
-                  <span>←</span>
+                  <span aria-hidden="true">←</span>
                   Back to Login
                 </motion.button>
 
@@ -895,7 +1065,7 @@ function ForgotPassword() {
                   Remembered your password?{" "}
                   <Link
                     to="/login"
-                    className="rpg-link text-amber-300/60 transition-colors hover:text-amber-300"
+                    className="rpg-link text-amber-300/60 transition-colors hover:text-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900"
                   >
                     Enter the Realm
                   </Link>
