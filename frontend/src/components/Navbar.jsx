@@ -45,6 +45,8 @@ function Navbar() {
   };
 
   useEffect(() => {
+    // Intentional UI reset when the route changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileMenuOpen(false);
   }, [location.pathname]);
 

@@ -46,44 +46,63 @@ function VerifyEmail() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const getInitialResendCooldown = () => {
+    const availableAt = Number(
+      localStorage.getItem(RESEND_COOLDOWN_STORAGE_KEY)
+    );
+
+    if (!availableAt) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      Math.ceil((availableAt - Date.now()) / 1000)
+    );
+  };
+
+  const [resendCooldown, setResendCooldown] = useState(
+    getInitialResendCooldown
+  );
 
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!location.state?.email) {
-      const pendingEmail = localStorage.getItem(
-        "pending_signup_email"
-      );
-
-      if (pendingEmail) {
-        setEmail(pendingEmail);
-      }
-    }
-
-    const availableAt = Number(
-      localStorage.getItem(
-        RESEND_COOLDOWN_STORAGE_KEY
-      )
-    );
-
-    if (availableAt) {
-      const remainingSeconds = Math.max(
-        0,
-        Math.ceil(
-          (availableAt - Date.now()) / 1000
-        )
-      );
-
-      setResendCooldown(remainingSeconds);
-
-      if (remainingSeconds === 0) {
-        localStorage.removeItem(
-          RESEND_COOLDOWN_STORAGE_KEY
+    const timer = setTimeout(() => {
+      if (!location.state?.email) {
+        const pendingEmail = localStorage.getItem(
+          "pending_signup_email"
         );
+
+        if (pendingEmail) {
+          setEmail(pendingEmail);
+        }
       }
-    }
+
+      const availableAt = Number(
+        localStorage.getItem(RESEND_COOLDOWN_STORAGE_KEY)
+      );
+
+      if (availableAt) {
+        const remainingSeconds = Math.max(
+          0,
+          Math.ceil((availableAt - Date.now()) / 1000)
+        );
+
+        setResendCooldown(remainingSeconds);
+
+        if (remainingSeconds === 0) {
+          localStorage.removeItem(
+            RESEND_COOLDOWN_STORAGE_KEY
+          );
+        }
+      } else {
+        setResendCooldown(0);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [location.state]);
 
   useEffect(() => {

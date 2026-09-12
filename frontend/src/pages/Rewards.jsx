@@ -1,47 +1,160 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
-const REWARD_TYPES = [
+const DASHBOARD_EASE = [0.22, 1, 0.36, 1];
+
+const dashboardReveal = {
+  hidden: {
+    opacity: 0,
+    y: 42,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.72,
+      ease: DASHBOARD_EASE,
+    },
+  },
+};
+
+const dashboardRevealFast = {
+  hidden: {
+    opacity: 0,
+    y: 28,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.58,
+      ease: DASHBOARD_EASE,
+    },
+  },
+};
+
+const LEADERBOARD_METRICS = [
+  { value: "xp", label: "XP" },
+  { value: "level", label: "Level" },
+  { value: "currentStreak", label: "Current Streak" },
+  { value: "longestStreak", label: "Longest Streak" },
+  { value: "strength", label: "Strength" },
+  { value: "intellect", label: "Intellect" },
+  { value: "discipline", label: "Discipline" },
+  { value: "vitality", label: "Vitality" },
+];
+
+const LEADERBOARD_LIMITS = [3, 10, 100];
+
+const ATTRIBUTE_CONFIG = [
   {
-    value: "all",
-    label: "All Rewards",
+    key: "strength",
+    label: "Strength",
+    short: "STR",
+    description: "Physical power and active energy.",
+    categories: ["gym"],
+    icon: "✦",
   },
   {
-    value: "item",
-    label: "Items",
+    key: "intellect",
+    label: "Intellect",
+    short: "INT",
+    description: "Knowledge, learning and mental growth.",
+    categories: ["coding", "learning"],
+    icon: "◈",
   },
   {
-    value: "theme",
-    label: "Themes",
+    key: "discipline",
+    label: "Discipline",
+    short: "DIS",
+    description: "Consistency, planning and self-control.",
+    categories: ["discipline", "planning"],
+    icon: "◆",
   },
   {
-    value: "badge",
-    label: "Badges",
+    key: "vitality",
+    label: "Vitality",
+    short: "VIT",
+    description: "Fitness, wellbeing and daily energy.",
+    categories: ["fitness"],
+    icon: "◇",
   },
 ];
 
-function Rewards() {
+function getXPRequiredForLevel(level) {
+  if (level <= 1) return 0;
+
+  return 50 * level * (level - 1);
+}
+
+function getStreakMessage(currentStreak) {
+  if (currentStreak === 0) {
+    return {
+      title: "Start your streak",
+      description:
+        "Complete a quest to begin building your daily momentum.",
+    };
+  }
+
+  if (currentStreak === 1) {
+    return {
+      title: "The journey begins",
+      description:
+        "You've completed today. Come back tomorrow to extend your streak.",
+    };
+  }
+
+  if (currentStreak < 7) {
+    return {
+      title: "Momentum is building",
+      description:
+        "Keep completing quests on consecutive days to grow your streak.",
+    };
+  }
+
+  if (currentStreak < 30) {
+    return {
+      title: "You're on a roll",
+      description:
+        "Your consistency is becoming part of your character.",
+    };
+  }
+
+  return {
+    title: "Elite consistency",
+    description:
+      "You've built an impressive streak. Keep the momentum alive.",
+  };
+}
+
+function Dashboard() {
   const navigate = useNavigate();
 
-  const [rewards, setRewards] = useState([]);
-  const [user, setUser] = useState(null);
+  const {
+    user,
+    loading: authLoading,
+    token,
+    refreshUser,
+  } = useAuth();
 
-  const [selectedType, setSelectedType] = useState("all");
+  const [tasks, setTasks] = useState([]);
 
-  const [loadingRewards, setLoadingRewards] = useState(true);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [currentUserRank, setCurrentUserRank] = useState(null);
 
-  const [purchasingId, setPurchasingId] = useState(null);
+  const [leaderboardMetric, setLeaderboardMetric] = useState("xp");
+  const [leaderboardLimit, setLeaderboardLimit] = useState(10);
 
-  const [error, setError] = useState("");
-  const [purchaseMessage, setPurchaseMessage] = useState("");
-  const [purchaseError, setPurchaseError] = useState("");
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
-  const token = localStorage.getItem("token");
+  const [tasksError, setTasksError] = useState("");
+  const [leaderboardError, setLeaderboardError] = useState("");
 
   const authHeaders = useMemo(
     () => ({
@@ -51,21 +164,12 @@ function Rewards() {
     [token]
   );
 
-  useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    fetchUser();
-    fetchRewards();
-  }, [token, navigate]);
-
-  const fetchUser = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
-      setLoadingUser(true);
+      setLoadingTasks(true);
+      setTasksError("");
 
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      const response = await fetch(`${API_BASE_URL}/tasks`, {
         method: "GET",
         headers: authHeaders,
       });
@@ -73,81 +177,36 @@ function Rewards() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to load your character"
-        );
+        throw new Error(result.message || "Unable to load quests");
       }
 
-      setUser(result.data.user);
-    } catch (err) {
-      console.error("Rewards user error:", err);
+      setTasks(result.data.tasks || []);
+    } catch (error) {
+      console.error("Dashboard tasks error:", error);
 
       if (
-        err.message === "Token expired" ||
-        err.message === "Invalid token"
+        error.message === "Token expired" ||
+        error.message === "Invalid token"
       ) {
-        localStorage.removeItem("token");
-        navigate("/login");
+        await refreshUser();
         return;
       }
 
-      setError(err.message || "Unable to load your character");
+      setTasksError(error.message || "Unable to load quests");
     } finally {
-      setLoadingUser(false);
+      setLoadingTasks(false);
     }
-  };
+  }, [authHeaders, refreshUser]);
 
-  const fetchRewards = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
-      setLoadingRewards(true);
-      setError("");
+      setLoadingLeaderboard(true);
+      setLeaderboardError("");
 
-      const response = await fetch(`${API_BASE_URL}/rewards`, {
-        method: "GET",
-        headers: authHeaders,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to load rewards"
-        );
-      }
-
-      setRewards(result.data.rewards || []);
-    } catch (err) {
-      console.error("Rewards fetch error:", err);
-
-      if (
-        err.message === "Token expired" ||
-        err.message === "Invalid token"
-      ) {
-        localStorage.removeItem("token");
-        navigate("/login");
-        return;
-      }
-
-      setError(err.message || "Unable to load rewards");
-    } finally {
-      setLoadingRewards(false);
-    }
-  };
-
-  const handlePurchase = async (reward) => {
-    if (!reward?._id || purchasingId) {
-      return;
-    }
-
-    setPurchaseMessage("");
-    setPurchaseError("");
-    setPurchasingId(reward._id);
-
-    try {
       const response = await fetch(
-        `${API_BASE_URL}/rewards/${reward._id}/purchase`,
+        `${API_BASE_URL}/leaderboard?metric=${leaderboardMetric}&limit=${leaderboardLimit}`,
         {
-          method: "POST",
+          method: "GET",
           headers: authHeaders,
         }
       );
@@ -155,959 +214,1000 @@ function Rewards() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to purchase this reward"
-        );
+        throw new Error(result.message || "Unable to load leaderboard");
       }
 
-      /*
-       * Backend remains authoritative for currency
-       * and inventory.
-       */
-      await fetchUser();
-
-      setPurchaseMessage(
-        `${reward.name} has been added to your inventory.`
-      );
-    } catch (err) {
-      console.error("Reward purchase error:", err);
+      setLeaderboard(result.data.leaderboard || []);
+      setCurrentUserRank(result.data.currentUserRank ?? null);
+    } catch (error) {
+      console.error("Dashboard leaderboard error:", error);
 
       if (
-        err.message === "Token expired" ||
-        err.message === "Invalid token"
+        error.message === "Token expired" ||
+        error.message === "Invalid token"
       ) {
-        localStorage.removeItem("token");
-        navigate("/login");
+        await refreshUser();
         return;
       }
 
-      setPurchaseError(
-        err.message || "Unable to purchase this reward"
+      setLeaderboardError(
+        error.message || "Unable to load leaderboard"
       );
     } finally {
-      setPurchasingId(null);
+      setLoadingLeaderboard(false);
     }
+  }, [authHeaders, leaderboardMetric, leaderboardLimit, refreshUser]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!token || !user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchTasks();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [authLoading, token, user, navigate, fetchTasks]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const timer = setTimeout(() => {
+      fetchLeaderboard();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [token, fetchLeaderboard]);
+
+  const completedTasks = tasks.filter(
+    (task) => task.completed
+  ).length;
+
+  const totalTasks = tasks.length;
+
+  const taskProgress =
+    totalTasks > 0
+      ? Math.round((completedTasks / totalTasks) * 100)
+      : 0;
+
+  const currentLevel = user?.level || 1;
+  const currentXp = user?.xp || 0;
+
+  const currentLevelXP = getXPRequiredForLevel(currentLevel);
+  const nextLevelXP = getXPRequiredForLevel(
+    currentLevel + 1
+  );
+
+  const xpNeededForLevel = nextLevelXP - currentLevelXP;
+
+  const xpIntoCurrentLevel = Math.max(
+    0,
+    currentXp - currentLevelXP
+  );
+
+  const levelProgress =
+    xpNeededForLevel > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (xpIntoCurrentLevel / xpNeededForLevel) * 100
+          )
+        )
+      : 0;
+
+  const remainingXp = Math.max(
+    0,
+    nextLevelXP - currentXp
+  );
+
+  const attributes = user?.attributes || {
+    strength: 0,
+    intellect: 0,
+    discipline: 0,
+    vitality: 0,
   };
 
-  const ownedRewardIds = useMemo(() => {
-    const inventory = user?.inventory || [];
+  const streak = user?.streak || {
+    current: 0,
+    longest: 0,
+  };
 
-    return new Set(
-      inventory
-        .map((entry) => {
-          if (!entry?.reward) {
-            return null;
-          }
+  const currentStreak = streak.current || 0;
+  const longestStreak = streak.longest || 0;
 
-          if (typeof entry.reward === "string") {
-            return entry.reward;
-          }
+  const streakMessage = getStreakMessage(currentStreak);
 
-          return entry.reward._id || entry.reward.id;
-        })
-        .filter(Boolean)
-        .map(String)
-    );
-  }, [user]);
+  const streakMilestones = [1, 3, 7, 14, 30];
 
-  const filteredRewards =
-    selectedType === "all"
-      ? rewards
-      : rewards.filter(
-          (reward) => reward.type === selectedType
-        );
+  const nextStreakMilestone =
+    streakMilestones.find(
+      (milestone) => milestone > currentStreak
+    ) || null;
 
-  const currency = user?.currency || 0;
+  const previousStreakMilestone =
+    [...streakMilestones]
+      .reverse()
+      .find(
+        (milestone) => milestone <= currentStreak
+      ) || 0;
+
+  const streakRange =
+    nextStreakMilestone !== null
+      ? nextStreakMilestone -
+        previousStreakMilestone
+      : 30 - previousStreakMilestone;
+
+  const streakProgress =
+    nextStreakMilestone !== null
+      ? Math.min(
+          100,
+          Math.round(
+            ((currentStreak -
+              previousStreakMilestone) /
+              Math.max(1, streakRange)) *
+              100
+          )
+        )
+      : 100;
+
+  const selectedMetricLabel =
+    LEADERBOARD_METRICS.find(
+      (metric) =>
+        metric.value === leaderboardMetric
+    )?.label || "XP";
+
+  const getMetricDisplayValue = (player) => {
+    if (leaderboardMetric === "xp") {
+      return `${player.metricValue} XP`;
+    }
+
+    if (leaderboardMetric === "level") {
+      return `Level ${player.metricValue}`;
+    }
+
+    if (
+      leaderboardMetric === "currentStreak" ||
+      leaderboardMetric === "longestStreak"
+    ) {
+      return `${player.metricValue} days`;
+    }
+
+    return player.metricValue;
+  };
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white" aria-labelledby="rewards-page-title">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <motion.div
-          animate={{
-            scale: [1, 1.08, 1],
-            opacity: [0.45, 0.7, 0.45],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl"
-        />
+    <main
+      className="min-h-screen bg-neutral-950 text-white"
+      aria-labelledby="dashboard-title"
+    >
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl" />
 
-        <motion.div
-          animate={{
-            scale: [1.08, 1, 1.08],
-            opacity: [0.35, 0.6, 0.35],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl"
-        />
+        <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl" />
       </div>
 
       <div className="relative">
         <Navbar />
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          {/* HEADER */}
+          {/* PAGE INTRO */}
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={dashboardRevealFast}
+            className="mb-8"
+          >
+            <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-amber-300/80">
+              Adventurer Dashboard
+            </p>
 
-          <section className="mb-8">
-            <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35 }}
-                  className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-amber-300/80"
-                >
-                  Adventurer Rewards
-                </motion.p>
-
-                <motion.h1
-                  id="rewards-page-title"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.4,
-                    delay: 0.04,
-                  }}
+                <h1
+                  id="dashboard-title"
                   className="text-3xl font-semibold tracking-tight sm:text-4xl"
                 >
-                  Reward Shop
-                </motion.h1>
+                  Welcome back
+                  {user?.name
+                    ? `, ${user.name}`
+                    : ""}
+                  .
+                </h1>
 
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{
-                    duration: 0.4,
-                    delay: 0.1,
-                  }}
-                  className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base"
-                >
-                  Spend the currency you've earned from completing
-                  your quests and unlock rewards for your journey.
-                </motion.p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base">
+                  Your everyday progress is building your character.
+                  Keep completing quests and keep moving forward.
+                </p>
               </div>
 
-              {/* CURRENCY */}
-
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: 14,
-                  scale: 0.97,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                }}
-                transition={{
-                  duration: 0.45,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                whileHover={{
-                  y: -3,
-                  scale: 1.015,
-                }}
-                className="group flex w-fit items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 shadow-[0_0_30px_rgba(252,211,77,0.03)] transition-shadow duration-300 hover:shadow-[0_0_35px_rgba(252,211,77,0.08)]"
+              <Link
+                to="/tasks"
+                className="inline-flex w-fit items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
               >
-                <motion.div
-                  animate={{
-                    rotate: [0, 4, -4, 0],
-                  }}
-                  transition={{
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  aria-hidden="true"
-                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-200"
+                View Quests
+                <span className="ml-2">→</span>
+              </Link>
+            </div>
+          </motion.section>
+
+          {/* CHARACTER PROGRESSION */}
+          {authLoading && (
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              variants={dashboardReveal}
+              className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8"
+            >
+              <div className="animate-pulse space-y-5">
+                <div className="h-4 w-40 rounded bg-white/10" />
+
+                <div className="h-8 w-64 rounded bg-white/10" />
+
+                <div className="h-3 w-full rounded bg-white/10" />
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="h-20 rounded-2xl bg-white/5" />
+                  <div className="h-20 rounded-2xl bg-white/5" />
+                  <div className="h-20 rounded-2xl bg-white/5" />
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {tasksError && !loadingTasks && (
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              variants={dashboardReveal}
+              className="mb-8 rounded-2xl border border-red-400/20 bg-red-400/5 p-5"
+            >
+              <p
+                className="text-sm text-red-300"
+                role="alert"
+                aria-live="assertive"
+              >
+                {tasksError}
+              </p>
+
+              <button
+                type="button"
+                onClick={fetchTasks}
+                className="mt-3 rounded-md text-sm font-medium text-amber-300 transition hover:text-amber-200 focus-visible:outline-2 focus-visible:outline-amber-300 focus-visible:outline-offset-3"
+              >
+                Try again →
+              </button>
+            </motion.section>
+          )}
+
+          {!authLoading && user && (
+            <motion.section
+              initial={{
+                opacity: 0,
+                y: 16,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.45,
+              }}
+              className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]"
+            >
+              <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-300/10 blur-3xl" />
+
+              <div className="relative p-6 sm:p-8">
+                <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
+                  <div className="flex items-center gap-4">
+                    <div
+                      aria-hidden="true"
+                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-2xl font-bold text-amber-200"
+                    >
+                      {user?.name
+                        ?.trim()
+                        ?.charAt(0)
+                        ?.toUpperCase() || "A"}
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-[0.2em] text-amber-300/70">
+                        Character Progression
+                      </p>
+
+                      <h2 className="mt-1 text-2xl font-semibold">
+                        {user.name ||
+                          "Adventurer"}
+                      </h2>
+
+                      <p className="mt-1 text-sm text-neutral-500">
+                        Your journey is becoming your character.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex w-fit items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
+                    <div
+                      aria-hidden="true"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10"
+                    >
+                      <span aria-hidden="true" className="text-sm font-bold text-amber-200">
+                        {String(
+                          currentLevel
+                        ).padStart(2, "0")}
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-amber-300/60">
+                        Current
+                      </p>
+
+                      <p className="text-sm font-semibold text-white">
+                        Level {currentLevel}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-500">
+                        Level Progress
+                      </p>
+
+                      <p className="mt-1 text-lg font-semibold">
+                        {currentXp} XP
+
+                        <span className="ml-2 text-sm font-normal text-neutral-600">
+                          total earned
+                        </span>
+                      </p>
+                    </div>
+
+                    <p className="text-sm text-amber-200">
+                      {remainingXp} XP to Level{" "}
+                      {currentLevel + 1}
+                    </p>
+                  </div>
+
+                  <div
+                    className="relative h-4 overflow-hidden rounded-full border border-white/5 bg-neutral-900"
+                    role="progressbar"
+                    aria-valuenow={
+                      levelProgress
+                    }
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label={`Level ${currentLevel} progress: ${levelProgress}%`}
+                  >
+                    <motion.div
+                      initial={{
+                        width: 0,
+                      }}
+                      animate={{
+                        width: `${levelProgress}%`,
+                      }}
+                      transition={{
+                        duration: 1,
+                        ease: "easeOut",
+                      }}
+                      className="relative h-full rounded-full bg-amber-300"
+                    >
+                      <div className="absolute inset-y-0 right-0 w-16 bg-white/30 blur-md" />
+                    </motion.div>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-xs text-neutral-600">
+                    <span>
+                      Level {currentLevel}
+                    </span>
+
+                    <span className="font-medium text-amber-300/70">
+                      {levelProgress}% complete
+                    </span>
+
+                    <span>
+                      Level {currentLevel + 1}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                  <ProgressInfo
+                    label="XP Earned"
+                    value={`${currentXp}`}
+                    description="Total character XP"
+                  />
+
+                  <ProgressInfo
+                    label="Current Level"
+                    value={`${currentLevel}`}
+                    description="Your present rank"
+                  />
+
+                  <ProgressInfo
+                    label="Next Level"
+                    value={`${nextLevelXP} XP`}
+                    description={`${remainingXp} XP remaining`}
+                  />
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* QUICK CHARACTER STATS */}
+          {!authLoading && user && (
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              variants={dashboardReveal}
+              className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4"
+            >
+              <StatCard
+                label="Currency"
+                value={user.currency || 0}
+                suffix="coins"
+                icon="◈"
+              />
+
+              <StatCard
+                label="Current Streak"
+                value={currentStreak}
+                suffix="days"
+                icon="🔥"
+              />
+
+              <StatCard
+                label="Longest Streak"
+                value={longestStreak}
+                suffix="days"
+                icon="↗"
+              />
+
+              <StatCard
+                label="Quest Progress"
+                value={completedTasks}
+                suffix={`/${totalTasks} done`}
+                icon="✓"
+              />
+            </motion.section>
+          )}
+
+          {/* ATTRIBUTES */}
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
+            <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
+                  Character Build
+                </p>
+
+                <h2
+                  id="attributes-title"
+                  className="mt-1 text-2xl font-semibold tracking-tight"
                 >
-                  ◈
-                </motion.div>
+                  Attributes
+                </h2>
 
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/60">
-                    Your Currency
-                  </p>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500">
+                  Every kind of quest develops a different part of your
+                  character.
+                </p>
+              </div>
 
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={currency}
+              <div className="flex items-center gap-2 text-xs text-neutral-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
+                Built through completed quests
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {ATTRIBUTE_CONFIG.map(
+                (attribute, index) => {
+                  const value =
+                    attributes[
+                      attribute.key
+                    ] || 0;
+
+                  const attributeProgress =
+                    Math.min(100, value * 10);
+
+                  const relatedTasks =
+                    tasks.filter((task) =>
+                      attribute.categories.includes(
+                        task.category
+                      )
+                    );
+
+                  const completedRelatedTasks =
+                    relatedTasks.filter(
+                      (task) => task.completed
+                    ).length;
+
+                  return (
+                    <motion.article
+                      key={attribute.key}
                       initial={{
                         opacity: 0,
-                        y: 5,
-                        scale: 0.95,
+                        y: 18,
                       }}
                       animate={{
                         opacity: 1,
                         y: 0,
-                        scale: 1,
                       }}
                       transition={{
-                        duration: 0.22,
+                        duration: 0.4,
+                        delay: index * 0.07,
                       }}
-                      className="mt-0.5 text-xl font-bold text-white"
+                      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] sm:p-6"
                     >
-                      {loadingUser ? "—" : currency}
+                      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-300/5 blur-3xl transition duration-500 group-hover:bg-amber-300/10" />
 
-                      <span className="ml-1.5 text-xs font-medium text-neutral-500">
-                        coins
-                      </span>
-                    </motion.p>
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            </div>
-          </section>
+                      <div className="relative">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              aria-hidden="true"
+                              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200"
+                            >
+                              {attribute.icon}
+                            </div>
 
-          {/* FEEDBACK */}
+                            <div>
+                              <p className="text-[11px] font-bold tracking-[0.18em] text-amber-300/60">
+                                {attribute.short}
+                              </p>
 
-          <AnimatePresence mode="wait">
-            {purchaseMessage && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: -14,
-                  scale: 0.98,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -10,
-                  scale: 0.98,
-                }}
-                transition={{
-                  duration: 0.3,
-                }}
-                className="mb-6 overflow-hidden rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3"
-                role="status"
-                aria-live="polite"
-              >
-                <div className="flex items-center gap-3">
-                  <motion.span
-                    initial={{ scale: 0.5, rotate: -20 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 15,
-                    }}
-                    aria-hidden="true"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-300"
-                  >
-                    ✓
-                  </motion.span>
+                              <h3 className="mt-0.5 text-lg font-semibold">
+                                {attribute.label}
+                              </h3>
+                            </div>
+                          </div>
 
-                  <p className="text-sm text-emerald-200">
-                    {purchaseMessage}
-                  </p>
-                </div>
-              </motion.div>
-            )}
+                          <div className="text-right">
+                            <p className="text-3xl font-bold tracking-tight text-white">
+                              {value}
+                            </p>
 
-            {purchaseError && (
-              <motion.div
-                initial={{
-                  opacity: 0,
-                  y: -14,
-                  scale: 0.98,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                  scale: 1,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -10,
-                  scale: 0.98,
-                }}
-                className="mb-6 overflow-hidden rounded-2xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3"
-                role="alert"
-                aria-live="assertive"
-              >
-                <div className="flex items-center gap-3">
-                  <motion.span
-                    initial={{ scale: 0.5 }}
-                    animate={{ scale: 1 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 15,
-                    }}
-                    aria-hidden="true"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-400/10 text-red-300"
-                  >
-                    !
-                  </motion.span>
+                            <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                              stat points
+                            </p>
+                          </div>
+                        </div>
 
-                  <p className="text-sm text-red-300">
-                    {purchaseError}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                        <p className="relative mt-5 max-w-md text-sm leading-6 text-neutral-500">
+                          {attribute.description}
+                        </p>
 
-          {/* FILTER */}
+                        <div className="relative mt-6">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                              Character Growth
+                            </span>
 
-          <motion.section
-            initial={{
-              opacity: 0,
-              y: 12,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              duration: 0.35,
-              delay: 0.12,
-            }}
-            aria-labelledby="reward-filter-title"
-            className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center"
-          >
-            <div>
-              <p id="reward-filter-title" className="text-xs uppercase tracking-[0.16em] text-neutral-600">
-                Browse Rewards
-              </p>
+                            <span className="text-xs font-medium text-amber-300/70">
+                              {attributeProgress}%
+                            </span>
+                          </div>
 
-              <p className="mt-1 text-sm text-neutral-400">
-                Choose a reward category.
-              </p>
-            </div>
+                          <div
+                            className="h-2 overflow-hidden rounded-full bg-neutral-900"
+                            role="progressbar"
+                            aria-valuenow={
+                              attributeProgress
+                            }
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-label={`${attribute.label} growth: ${attributeProgress}%`}
+                          >
+                            <motion.div
+                              initial={{
+                                width: 0,
+                              }}
+                              animate={{
+                                width: `${attributeProgress}%`,
+                              }}
+                              transition={{
+                                duration: 0.8,
+                                delay:
+                                  index * 0.07,
+                                ease: "easeOut",
+                              }}
+                              className="relative h-full rounded-full bg-amber-300"
+                            >
+                              <div className="absolute right-0 top-0 h-full w-10 bg-white/30 blur-sm" />
+                            </motion.div>
+                          </div>
+                        </div>
 
-            <div
-              className="flex max-w-full gap-2 overflow-x-auto pb-1"
-              aria-label="Reward categories"
-            >
-              {REWARD_TYPES.map((type) => {
-                const isSelected =
-                  selectedType === type.value;
+                        <div className="relative mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                              Quest Sources
+                            </p>
 
-                return (
-                  <motion.button
-                    key={type.value}
-                    type="button"
-                    onClick={() =>
-                      setSelectedType(type.value)
-                    }
-                    aria-pressed={isSelected}
-                    whileHover={{
-                      y: -1,
-                    }}
-                    whileTap={{
-                      scale: 0.96,
-                    }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 20,
-                    }}
-                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
-                      isSelected
-                        ? "bg-amber-300 text-neutral-950 shadow-[0_0_20px_rgba(252,211,77,0.12)]"
-                        : "border border-white/10 bg-white/[0.03] text-neutral-400 hover:border-amber-300/20 hover:text-neutral-200"
-                    }`}
-                  >
-                    {type.label}
-                  </motion.button>
-                );
-              })}
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {attribute.categories.map(
+                                (category) => (
+                                  <span
+                                    key={
+                                      category
+                                    }
+                                    className="rounded-lg border border-white/5 bg-black/20 px-2 py-1 text-[10px] capitalize text-neutral-500"
+                                  >
+                                    {category}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                              Completed
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold text-neutral-300">
+                              {
+                                completedRelatedTasks
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.article>
+                  );
+                }
+              )}
             </div>
           </motion.section>
 
-          {/* ERROR */}
+          {/* STREAK */}
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
+            <div className="mb-5">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
+                Consistency
+              </p>
 
-          <AnimatePresence>
-            {error && !loadingRewards && (
-              <motion.section
+              <h2
+                id="streak-title"
+                className="mt-1 text-2xl font-semibold tracking-tight"
+              >
+                Streak
+              </h2>
+
+              <p className="mt-1 text-sm leading-6 text-neutral-500">
+                Show up consistently and keep your momentum alive.
+              </p>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+              {/* Current streak */}
+              <motion.article
                 initial={{
                   opacity: 0,
-                  y: -10,
+                  y: 18,
                 }}
                 animate={{
                   opacity: 1,
                   y: 0,
                 }}
-                exit={{
-                  opacity: 0,
-                  y: -10,
+                transition={{
+                  duration: 0.4,
                 }}
-                className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-5"
-                role="alert"
-                aria-live="assertive"
+                className="relative overflow-hidden rounded-3xl border border-amber-300/15 bg-amber-300/[0.04] p-6 sm:p-7"
               >
-                <p className="text-sm text-red-300">
-                  {error}
-                </p>
+                <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-300/10 blur-3xl" />
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    fetchRewards();
-                    fetchUser();
-                  }}
-                  className="mt-3 rounded-md px-2 py-1 text-left text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
-                >
-                  Try again →
-                </button>
-              </motion.section>
-            )}
-          </AnimatePresence>
-
-          {/* LOADING */}
-
-          {loadingRewards && (
-            <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="status" aria-live="polite" aria-label="Loading rewards">
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <motion.div
-                  key={item}
-                  initial={{
-                    opacity: 0,
-                    y: 10,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  transition={{
-                    duration: 0.3,
-                    delay: item * 0.04,
-                  }}
-                  className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]"
-                  aria-hidden="true"
-                >
-                  <div className="h-48 animate-pulse bg-white/5" />
-
-                  <div className="space-y-4 p-5">
-                    <div className="h-5 w-2/3 animate-pulse rounded bg-white/10" />
-
-                    <div className="h-4 w-full animate-pulse rounded bg-white/5" />
-
-                    <div className="h-4 w-4/5 animate-pulse rounded bg-white/5" />
-
-                    <div className="h-11 w-full animate-pulse rounded-xl bg-white/10" />
-                  </div>
-                </motion.div>
-              ))}
-            </section>
-          )}
-
-          {/* EMPTY */}
-
-          <AnimatePresence mode="wait">
-            {!loadingRewards &&
-              !error &&
-              filteredRewards.length === 0 && (
-                <motion.section
-                  initial={{
-                    opacity: 0,
-                    scale: 0.98,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    scale: 1,
-                  }}
-                  transition={{
-                    duration: 0.3,
-                  }}
-                  className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-12 text-center"
-                  role="status"
-                >
-                  <motion.div
-                    animate={{
-                      y: [0, -4, 0],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    aria-hidden="true"
-                    className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200"
-                  >
-                    ◈
-                  </motion.div>
-
-                  <h2 className="mt-5 text-lg font-semibold">
-                    No rewards available
-                  </h2>
-
-                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">
-                    There are currently no rewards in this category.
-                  </p>
-                </motion.section>
-              )}
-          </AnimatePresence>
-
-          {/* REWARDS */}
-
-          {!loadingRewards &&
-            !error &&
-            filteredRewards.length > 0 && (
-              <motion.section
-                layout
-                aria-label="Available rewards"
-                className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
-              >
-                <AnimatePresence mode="popLayout">
-                  {filteredRewards.map((reward, index) => {
-                    const isOwned = ownedRewardIds.has(
-                      String(reward._id)
-                    );
-
-                    const canAfford =
-                      currency >= (reward.cost || 0);
-
-                    const isPurchasing =
-                      purchasingId === reward._id;
-
-                    return (
-                      <motion.article
-                        key={reward._id}
-                        aria-label={`${reward.name}. ${reward.type} reward. Cost ${reward.cost || 0} coins. ${isOwned ? "Already in inventory." : canAfford ? "Available for purchase." : "Not enough coins."}`}
-                        layout
-                        initial={{
-                          opacity: 0,
-                          y: 24,
-                          scale: 0.97,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          scale: 1,
-                        }}
-                        exit={{
-                          opacity: 0,
-                          y: -10,
-                          scale: 0.97,
-                        }}
-                        transition={{
-                          duration: 0.35,
-                          delay: index * 0.05,
-                          ease: [0.22, 1, 0.36, 1],
-                        }}
-                        whileHover={
-                          isOwned
-                            ? {
-                                y: -4,
-                              }
-                            : {
-                                y: -7,
-                                scale: 1.008,
-                              }
-                        }
-                        className={`group relative overflow-hidden rounded-3xl border bg-white/[0.03] transition duration-300 ${
-                          isOwned
-                            ? "border-emerald-300/15 shadow-[0_0_25px_rgba(52,211,153,0.025)]"
-                            : "border-white/10 hover:border-amber-300/20 hover:bg-white/[0.045] hover:shadow-[0_18px_50px_rgba(0,0,0,0.22)]"
-                        }`}
+                <div className="relative">
+                  <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
+                    <div className="flex items-center gap-4">
+                      <div
+                        aria-hidden="true"
+                        className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-3xl"
                       >
-                        {/* HOVER LIGHT */}
+                        🔥
+                      </div>
 
-                        <motion.div
-                          initial={{
-                            opacity: 0,
-                          }}
-                          whileHover={{
-                            opacity: 1,
-                          }}
-                          transition={{
-                            duration: 0.25,
-                          }}
-                          aria-hidden="true"
-                          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-amber-300/40"
-                        />
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-amber-300/60">
+                          Current Streak
+                        </p>
 
-                        {/* VISUAL AREA */}
-
-                        <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-white/5 bg-gradient-to-br from-amber-300/[0.08] via-transparent to-transparent">
-                          <motion.div
-                            initial={{
-                              opacity: 0.6,
-                              scale: 1,
-                            }}
-                            whileHover={{
-                              opacity: 1,
-                              scale: 1.12,
-                            }}
-                            transition={{
-                              duration: 0.45,
-                            }}
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(252,211,77,0.08),transparent_55%)]"
-                          />
-
-                          {/* DECORATIVE ORBIT */}
-
-                          <motion.div
-                            animate={{
-                              rotate: 360,
-                            }}
-                            transition={{
-                              duration: 18,
-                              repeat: Infinity,
-                              ease: "linear",
-                            }}
-                            aria-hidden="true"
-                            className="pointer-events-none absolute h-32 w-32 rounded-full border border-amber-300/[0.04]"
-                          />
-
-                          {reward.image ? (
-                            <motion.img
-                              src={reward.image}
-                              alt={reward.name}
-                              whileHover={{
-                                scale: 1.06,
-                              }}
-                              transition={{
-                                duration: 0.45,
-                              }}
-                              className="relative h-full w-full object-cover"
-                            />
-                          ) : (
-                            <motion.div
-                              whileHover={{
-                                scale: 1.1,
-                                rotate: 4,
-                              }}
-                              whileTap={{
-                                scale: 0.96,
-                              }}
-                              transition={{
-                                type: "spring",
-                                stiffness: 250,
-                                damping: 15,
-                              }}
-                              aria-hidden="true"
-                              className={`relative flex h-24 w-24 items-center justify-center rounded-3xl border text-4xl shadow-[0_0_50px_rgba(252,211,77,0.08)] ${
-                                isOwned
-                                  ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-300"
-                                  : "border-amber-300/20 bg-amber-300/[0.06] text-amber-200"
-                              }`}
-                            >
-                              {getRewardIcon(reward.type)}
-                            </motion.div>
-                          )}
-
-                          {/* TYPE */}
-
-                          <span className="absolute left-4 top-4 rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-400 backdrop-blur">
-                            {reward.type}
+                        <div className="mt-1 flex items-baseline gap-2">
+                          <span className="text-4xl font-bold tracking-tight text-white">
+                            {currentStreak}
                           </span>
 
-                          {/* OWNED */}
-
-                          <AnimatePresence>
-                            {isOwned && (
-                              <motion.span
-                                initial={{
-                                  opacity: 0,
-                                  scale: 0.8,
-                                  x: 8,
-                                }}
-                                animate={{
-                                  opacity: 1,
-                                  scale: 1,
-                                  x: 0,
-                                }}
-                                transition={{
-                                  type: "spring",
-                                  stiffness: 350,
-                                  damping: 18,
-                                }}
-                                className="absolute right-4 top-4 flex items-center gap-1.5 rounded-lg border border-emerald-300/20 bg-neutral-950/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300 backdrop-blur"
-                              >
-                                <motion.span
-                                  initial={{
-                                    scale: 0,
-                                  }}
-                                  animate={{
-                                    scale: 1,
-                                  }}
-                                  transition={{
-                                    delay: 0.1,
-                                    type: "spring",
-                                    stiffness: 450,
-                                    damping: 15,
-                                  }}
-                                >
-                                  <span aria-hidden="true">✓</span>
-                                </motion.span>
-
-                                Owned
-                              </motion.span>
-                            )}
-                          </AnimatePresence>
+                          <span className="text-sm text-neutral-500">
+                            {currentStreak ===
+                            1
+                              ? "day"
+                              : "days"}
+                          </span>
                         </div>
+                      </div>
+                    </div>
 
-                        {/* CONTENT */}
+                    <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-xs text-neutral-500">
+                      Daily consistency
+                    </div>
+                  </div>
 
-                        <div className="p-5">
-                          <div className="min-h-[96px]">
-                            <motion.h2
-                              layout="position"
-                              className="text-lg font-semibold text-neutral-100 transition-colors duration-300 group-hover:text-white"
+                  <div className="mt-7">
+                    <h3 className="text-base font-semibold text-neutral-200">
+                      {streakMessage.title}
+                    </h3>
+
+                    <p className="mt-1 max-w-xl text-sm leading-6 text-neutral-500">
+                      {streakMessage.description}
+                    </p>
+                  </div>
+
+                  {/* Milestones */}
+                  <div className="mt-7">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                        Streak Milestones
+                      </span>
+
+                      {nextStreakMilestone !==
+                        null && (
+                        <span className="text-xs text-amber-300/70">
+                          {nextStreakMilestone -
+                            currentStreak}{" "}
+                          days to go
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      className="relative h-2 rounded-full bg-neutral-900"
+                      role="progressbar"
+                      aria-valuenow={
+                        streakProgress
+                      }
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-label={`Streak milestone progress: ${streakProgress}%`}
+                    >
+                      <motion.div
+                        initial={{
+                          width: 0,
+                        }}
+                        animate={{
+                          width: `${streakProgress}%`,
+                        }}
+                        transition={{
+                          duration: 0.8,
+                          ease: "easeOut",
+                        }}
+                        className="h-full rounded-full bg-amber-300"
+                      />
+                    </div>
+
+                    <div className="mt-4 flex justify-between">
+                      {streakMilestones.map(
+                        (milestone) => {
+                          const reached =
+                            currentStreak >=
+                            milestone;
+
+                          return (
+                            <div
+                              key={milestone}
+                              className="flex flex-col items-center gap-1.5"
                             >
-                              {reward.name}
-                            </motion.h2>
+                              <span
+                                className={`flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold ${
+                                  reached
+                                    ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
+                                    : "border-white/10 bg-white/[0.02] text-neutral-600"
+                                }`}
+                              >
+                                {reached
+                                  ? "✓"
+                                  : milestone}
+                              </span>
 
-                            <p className="mt-2 line-clamp-3 text-sm leading-6 text-neutral-500">
-                              {reward.description ||
-                                "A reward for your character journey."}
-                            </p>
-                          </div>
-
-                          {/* PRICE */}
-
-                          <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
-                            <div>
-                              <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-                                Cost
-                              </p>
-
-                              <div className="mt-1 flex items-center gap-1.5">
-                                <motion.span
-                                  whileHover={{
-                                    scale: 1.12,
-                                    rotate: 5,
-                                  }}
-                                  aria-hidden="true"
-                                  className="text-lg text-amber-300"
-                                >
-                                  ◈
-                                </motion.span>
-
-                                <span className="text-lg font-bold text-neutral-200">
-                                  {reward.cost || 0}
-                                </span>
-
-                                <span className="text-xs text-neutral-600">
-                                  coins
-                                </span>
-                              </div>
+                              <span
+                                className={`text-[10px] ${
+                                  reached
+                                    ? "text-amber-300/70"
+                                    : "text-neutral-700"
+                                }`}
+                              >
+                                {milestone}d
+                              </span>
                             </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </motion.article>
 
-                            <AnimatePresence mode="wait">
-                              {!isOwned &&
-                                !canAfford && (
-                                  <motion.span
-                                    key="not-enough"
-                                    initial={{
-                                      opacity: 0,
-                                      x: 5,
-                                    }}
-                                    animate={{
-                                      opacity: 1,
-                                      x: 0,
-                                    }}
-                                    className="text-right text-[10px] uppercase tracking-wider text-red-300/70"
-                                  >
-                                    Not enough
-                                  </motion.span>
-                                )}
+              {/* Longest streak */}
+              <motion.article
+                initial={{
+                  opacity: 0,
+                  y: 18,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.4,
+                  delay: 0.08,
+                }}
+                className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+                      Personal Best
+                    </p>
 
-                              {!isOwned &&
-                                canAfford && (
-                                  <motion.span
-                                    key="available"
-                                    initial={{
-                                      opacity: 0,
-                                      x: 5,
-                                    }}
-                                    animate={{
-                                      opacity: 1,
-                                      x: 0,
-                                    }}
-                                    className="text-right text-[10px] uppercase tracking-wider text-amber-300/60"
-                                  >
-                                    Available
-                                  </motion.span>
-                                )}
+                    <h3 className="mt-1 text-lg font-semibold">
+                      Longest Streak
+                    </h3>
+                  </div>
 
-                              {isOwned && (
-                                <motion.span
-                                  key="unlocked"
-                                  initial={{
-                                    opacity: 0,
-                                    x: 5,
-                                  }}
-                                  animate={{
-                                    opacity: 1,
-                                    x: 0,
-                                  }}
-                                  className="text-right text-[10px] uppercase tracking-wider text-emerald-300/60"
-                                >
-                                  Unlocked
-                                </motion.span>
-                              )}
-                            </AnimatePresence>
-                          </div>
+                  <div
+                    aria-hidden="true"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200"
+                  >
+                    🏆
+                  </div>
+                </div>
 
-                          {/* ACTION */}
+                <div className="mt-8">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-bold tracking-tight">
+                      {longestStreak}
+                    </span>
 
-                          <motion.button
-                            type="button"
-                            onClick={() =>
-                              handlePurchase(reward)
-                            }
-                            disabled={
-                              isOwned ||
-                              !canAfford ||
-                              isPurchasing ||
-                              loadingUser
-                            }
-                            aria-disabled={isOwned || !canAfford || isPurchasing || loadingUser}
-                            aria-busy={isPurchasing}
-                            aria-label={
-                              isOwned
-                                ? `${reward.name} is already in inventory`
-                                : isPurchasing
-                                ? `Purchasing ${reward.name}`
-                                : !canAfford
-                                ? `Cannot purchase ${reward.name}. Need more coins.`
-                                : `Purchase ${reward.name} for ${reward.cost || 0} coins`
-                            }
-                            whileHover={
-                              !isOwned &&
-                              canAfford &&
-                              !loadingUser
-                                ? {
-                                    y: -2,
-                                  }
-                                : undefined
-                            }
-                            whileTap={
-                              !isOwned &&
-                              canAfford &&
-                              !loadingUser
-                                ? {
-                                    scale: 0.975,
-                                  }
-                                : undefined
-                            }
-                            transition={{
-                              type: "spring",
-                              stiffness: 400,
-                              damping: 20,
-                            }}
-                            className={`relative mt-5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
-                              isOwned
-                                ? "cursor-default border border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-300"
-                                : !canAfford
-                                ? "cursor-not-allowed border border-white/5 bg-white/[0.02] text-neutral-600"
-                                : "bg-amber-300 text-neutral-950 shadow-[0_8px_25px_rgba(252,211,77,0.08)] hover:bg-amber-200 hover:shadow-[0_10px_30px_rgba(252,211,77,0.14)]"
-                            }`}
-                          >
-                            {/* BUTTON SHIMMER */}
+                    <span className="text-sm text-neutral-500">
+                      {longestStreak === 1
+                        ? "day"
+                        : "days"}
+                    </span>
+                  </div>
 
-                            {!isOwned &&
-                              canAfford &&
-                              !isPurchasing && (
-                                <motion.span
-                                  initial={{
-                                    x: "-120%",
-                                  }}
-                                  animate={{
-                                    x: "120%",
-                                  }}
-                                  transition={{
-                                    duration: 2.2,
-                                    repeat: Infinity,
-                                    repeatDelay: 3,
-                                    ease: "easeInOut",
-                                  }}
-                                  className="pointer-events-none absolute inset-y-0 w-1/3 skew-x-[-18deg] bg-white/20 blur-sm"
-                                />
-                              )}
+                  <p className="mt-3 text-sm leading-6 text-neutral-500">
+                    Your longest consecutive run so far.
+                  </p>
+                </div>
 
-                            <span className="relative z-10 flex items-center gap-2">
-                              {isPurchasing ? (
-                                <>
-                                  <motion.span
-                                    animate={{
-                                      rotate: 360,
-                                    }}
-                                    transition={{
-                                      duration: 0.8,
-                                      repeat: Infinity,
-                                      ease: "linear",
-                                    }}
-                                    aria-hidden="true"
-                                    className="h-4 w-4 rounded-full border-2 border-neutral-950/30 border-t-neutral-950"
-                                  />
+                <div className="mt-8 border-t border-white/5 pt-5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-neutral-600">
+                      Current vs personal best
+                    </span>
 
-                                  Purchasing...
-                                </>
-                              ) : isOwned ? (
-                                <>
-                                  <motion.span
-                                    initial={{
-                                      scale: 0.5,
-                                    }}
-                                    animate={{
-                                      scale: 1,
-                                    }}
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 400,
-                                      damping: 15,
-                                    }}
-                                  >
-                                    ✓
-                                  </motion.span>
+                    <span className="font-medium text-neutral-400">
+                      {longestStreak > 0
+                        ? `${Math.min(
+                            100,
+                            Math.round(
+                              (currentStreak /
+                                longestStreak) *
+                                100
+                            )
+                          )}%`
+                        : "0%"}
+                    </span>
+                  </div>
 
-                                  In Inventory
-                                </>
-                              ) : !canAfford ? (
-                                "Need More Coins"
-                              ) : (
-                                <>
-                                  Purchase
+                  <div
+                    className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-900"
+                    role="progressbar"
+                    aria-valuenow={
+                      longestStreak > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (currentStreak /
+                                longestStreak) *
+                                100
+                            )
+                          )
+                        : 0
+                    }
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label="Current streak compared with personal best"
+                  >
+                    <motion.div
+                      initial={{
+                        width: 0,
+                      }}
+                      animate={{
+                        width: `${
+                          longestStreak >
+                          0
+                            ? Math.min(
+                                100,
+                                Math.round(
+                                  (currentStreak /
+                                    longestStreak) *
+                                    100
+                                )
+                              )
+                            : 0
+                        }%`,
+                      }}
+                      transition={{
+                        duration: 0.7,
+                        ease: "easeOut",
+                      }}
+                      className="h-full rounded-full bg-amber-300/80"
+                    />
+                  </div>
+                </div>
+              </motion.article>
+            </div>
+          </motion.section>
 
-                                  <motion.span
-                                    animate={{
-                                      x: [0, 3, 0],
-                                    }}
-                                    transition={{
-                                      duration: 1.5,
-                                      repeat: Infinity,
-                                      ease: "easeInOut",
-                                    }}
-                                  >
-                                    →
-                                  </motion.span>
-                                </>
-                              )}
-                            </span>
-                          </motion.button>
-                        </div>
-                      </motion.article>
-                    );
-                  })}
-                </AnimatePresence>
-              </motion.section>
-            )}
+          {/* QUEST PROGRESS */}
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
+            <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
+                  Daily Progress
+                </p>
 
-          {/* FOOTER INFO */}
+                <h2
+                  id="quest-progress-title"
+                  className="mt-1 text-2xl font-semibold tracking-tight"
+                >
+                  Quest Progress
+                </h2>
 
-          {!loadingRewards && rewards.length > 0 && (
-            <motion.section
+                <p className="mt-1 text-sm leading-6 text-neutral-500">
+                  Turn completed real-world actions into character progression.
+                </p>
+              </div>
+
+              <Link
+                to="/tasks"
+                className="text-sm font-medium text-amber-300 transition hover:text-amber-200"
+              >
+                Manage Quests →
+              </Link>
+            </div>
+
+            <motion.article
               initial={{
                 opacity: 0,
-                y: 12,
+                y: 18,
               }}
               animate={{
                 opacity: 1,
@@ -1115,55 +1215,449 @@ function Rewards() {
               }}
               transition={{
                 duration: 0.4,
-                delay: 0.2,
               }}
-              className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6"
-              aria-labelledby="reward-footer-title"
+              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p id="reward-footer-title" className="text-sm font-medium text-neutral-300">
-                    Earn more currency through quests.
-                  </p>
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+                <div className="flex items-center gap-4">
+                  <div
+                    aria-hidden="true"
+                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200"
+                  >
+                    ✓
+                  </div>
 
-                  <p className="mt-1 text-xs leading-5 text-neutral-600">
-                    Complete real-life tasks to earn currency and
-                    unlock more rewards.
-                  </p>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] text-neutral-600">
+                      Completion Rate
+                    </p>
+
+                    <p className="mt-1 text-2xl font-semibold">
+                      {completedTasks}
+                      <span className="text-sm font-normal text-neutral-600">
+                        {" "}
+                        / {totalTasks} quests
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
-                <motion.button
-                  type="button"
-                  onClick={() => navigate("/tasks")}
-                  whileHover={{
-                    x: 3,
-                  }}
-                  whileTap={{
-                    scale: 0.97,
-                  }}
-                  className="w-fit rounded-md px-2 py-1 text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
-                >
-                  Go to Quests →
-                </motion.button>
+                <div className="w-full max-w-md">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs text-neutral-600">
+                      Overall progress
+                    </span>
+
+                    <span className="text-xs font-medium text-amber-300/70">
+                      {taskProgress}%
+                    </span>
+                  </div>
+
+                  <div
+                    className="h-2.5 overflow-hidden rounded-full bg-neutral-900"
+                    role="progressbar"
+                    aria-valuenow={taskProgress}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label={`Quest completion: ${taskProgress}%`}
+                  >
+                    <motion.div
+                      initial={{
+                        width: 0,
+                      }}
+                      animate={{
+                        width: `${taskProgress}%`,
+                      }}
+                      transition={{
+                        duration: 0.8,
+                        ease: "easeOut",
+                      }}
+                      className="h-full rounded-full bg-amber-300"
+                    />
+                  </div>
+                </div>
               </div>
-            </motion.section>
-          )}
+            </motion.article>
+          </motion.section>
+
+          {/* LEADERBOARD */}
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
+            <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
+                  Global Rankings
+                </p>
+
+                <h2
+                  id="leaderboard-title"
+                  className="mt-1 text-xl font-semibold"
+                >
+                  Leaderboard
+                </h2>
+
+                <p className="mt-1 text-sm text-neutral-500">
+                  See how adventurers are progressing across the rankings.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:flex">
+                <div>
+                  <label
+                    htmlFor="leaderboard-metric"
+                    className="mb-1.5 block text-xs font-medium text-neutral-500"
+                  >
+                    Rank by
+                  </label>
+
+                  <select
+                    id="leaderboard-metric"
+                    value={leaderboardMetric}
+                    aria-describedby="leaderboard-controls-help"
+                    onChange={(event) =>
+                      setLeaderboardMetric(
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-300/40 focus:ring-2 focus:ring-amber-300/10 sm:w-44"
+                  >
+                    {LEADERBOARD_METRICS.map(
+                      (metric) => (
+                        <option
+                          key={metric.value}
+                          value={metric.value}
+                          className="bg-neutral-900"
+                        >
+                          {metric.label}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="leaderboard-limit"
+                    className="mb-1.5 block text-xs font-medium text-neutral-500"
+                  >
+                    Show
+                  </label>
+
+                  <select
+                    id="leaderboard-limit"
+                    value={leaderboardLimit}
+                    aria-describedby="leaderboard-controls-help"
+                    onChange={(event) =>
+                      setLeaderboardLimit(
+                        Number(
+                          event.target.value
+                        )
+                      )
+                    }
+                    className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-300/40 focus:ring-2 focus:ring-amber-300/10 sm:w-28"
+                  >
+                    {LEADERBOARD_LIMITS.map(
+                      (limit) => (
+                        <option
+                          key={limit}
+                          value={limit}
+                          className="bg-neutral-900"
+                        >
+                          Top {limit}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+              <p id="leaderboard-controls-help" className="sr-only">
+                Choose the ranking metric and the number of top adventurers to display.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col justify-between gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/5 p-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-amber-300/60">
+                  Your Global Rank
+                </p>
+
+                <p className="mt-1 text-sm text-neutral-300">
+                  Ranked by {selectedMetricLabel}
+                </p>
+              </div>
+
+              <div className="text-2xl font-bold text-amber-200">
+                {currentUserRank
+                  ? `#${currentUserRank}`
+                  : "—"}
+              </div>
+            </div>
+
+            {loadingLeaderboard && (
+              <div
+                className="mt-5 space-y-3"
+                role="status"
+                aria-live="polite"
+                aria-label="Loading leaderboard"
+              >
+                {[1, 2, 3, 4, 5].map(
+                  (item) => (
+                    <div
+                      key={item}
+                      className="h-16 animate-pulse rounded-2xl bg-white/5"
+                    />
+                  )
+                )}
+              </div>
+            )}
+
+            {leaderboardError &&
+              !loadingLeaderboard && (
+                <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/5 p-4">
+                  <p
+                    className="text-sm text-red-300"
+                    role="alert"
+                    aria-live="assertive"
+                  >
+                    {leaderboardError}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={fetchLeaderboard}
+                    className="mt-2 rounded-md text-sm font-medium text-amber-300 transition hover:text-amber-200 focus-visible:outline-2 focus-visible:outline-amber-300 focus-visible:outline-offset-3"
+                  >
+                    Try again →
+                  </button>
+                </div>
+              )}
+
+            {!loadingLeaderboard &&
+              !leaderboardError &&
+              leaderboard.length === 0 && (
+                <div
+                  className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <p className="text-sm text-neutral-500">
+                    No ranking data available yet.
+                  </p>
+                </div>
+              )}
+
+            {!loadingLeaderboard &&
+              !leaderboardError &&
+              leaderboard.length > 0 && (
+                <div
+                  className="mt-5 overflow-hidden rounded-2xl border border-white/5"
+                  role="table"
+                  aria-label={`Global leaderboard ranked by ${selectedMetricLabel}`}
+                  aria-rowcount={leaderboard.length + 1}
+                >
+                  <div
+                    className="hidden grid-cols-[70px_1fr_120px_150px] border-b border-white/5 bg-black/20 px-5 py-3 text-xs uppercase tracking-wider text-neutral-600 sm:grid"
+                    role="row"
+                    aria-rowindex="1"
+                  >
+                    <span role="columnheader">Rank</span>
+
+                    <span role="columnheader">Adventurer</span>
+
+                    <span role="columnheader">Level</span>
+
+                    <span role="columnheader" className="text-right">
+                      {selectedMetricLabel}
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-white/5">
+                    {leaderboard.map(
+                      (player) => (
+                        <LeaderboardRow
+                          key={`${player.rank}-${player.name}`}
+                          player={player}
+                          metricValue={getMetricDisplayValue(
+                            player
+                          )}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+          </motion.section>
+
+          {/* FINAL CTA */}
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="rounded-3xl border border-amber-300/10 bg-gradient-to-br from-amber-300/[0.08] to-transparent p-6 sm:p-8"
+          >
+            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
+                  Keep the momentum
+                </p>
+
+                <h2 className="mt-2 text-2xl font-semibold">
+                  Every completed quest moves you forward.
+                </h2>
+
+                <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">
+                  Turn today's real-world actions into tomorrow's stronger character.
+                </p>
+              </div>
+
+              <Link
+                to="/tasks"
+                className="inline-flex shrink-0 items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10 px-5 py-3 text-sm font-semibold text-amber-200 transition hover:bg-amber-300/15 hover:text-amber-100"
+              >
+                Continue Your Journey →
+              </Link>
+            </div>
+          </motion.section>
         </div>
       </div>
     </main>
   );
 }
 
-function getRewardIcon(type) {
-  if (type === "theme") {
-    return "◉";
-  }
+function ProgressInfo({
+  label,
+  value,
+  description,
+}) {
+  return (
+    <motion.div
+      whileHover={{ y: -3 }}
+      transition={{ duration: 0.22, ease: DASHBOARD_EASE }}
+      className="rounded-2xl border border-white/5 bg-black/20 p-4 transition-[border-color,background-color] duration-300 hover:border-white/10 hover:bg-black/25"
+    >
+      <p className="text-xs uppercase tracking-wider text-neutral-600">
+        {label}
+      </p>
 
-  if (type === "badge") {
-    return "◆";
-  }
+      <p className="mt-1 text-xl font-semibold text-neutral-100">
+        {value}
+      </p>
 
-  return "✦";
+      <p className="mt-1 text-xs text-neutral-600">
+        {description}
+      </p>
+    </motion.div>
+  );
 }
 
-export default Rewards;
+function StatCard({
+  label,
+  value,
+  suffix,
+  icon,
+}) {
+  return (
+    <motion.article
+      initial={{
+        opacity: 0,
+        y: 10,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25, ease: DASHBOARD_EASE }}
+      className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-[border-color,background-color,box-shadow] duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] hover:shadow-lg hover:shadow-black/10"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-wider text-neutral-500">
+          {label}
+        </p>
+
+        <span
+          aria-hidden="true"
+          className="text-sm text-amber-300/70"
+        >
+          {icon}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="text-2xl font-semibold">
+          {value}
+        </span>
+
+        <span className="text-xs text-neutral-600">
+          {suffix}
+        </span>
+      </div>
+    </motion.article>
+  );
+}
+
+function LeaderboardRow({
+  player,
+  metricValue,
+}) {
+  const isTopThree = player.rank <= 3;
+
+  return (
+    <div
+      role="row"
+      aria-rowindex={player.rank + 1}
+      aria-label={`Rank ${player.rank}, ${player.name}, Level ${player.level}, ${metricValue}`}
+      className={`grid gap-3 px-4 py-4 transition sm:grid-cols-[70px_1fr_120px_150px] sm:items-center sm:px-5 ${
+        isTopThree
+          ? "bg-amber-300/[0.025]"
+          : "hover:bg-white/[0.025]"
+      }`}
+    >
+      <div role="cell" className="flex items-center gap-3">
+        <span
+          className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${
+            player.rank === 1
+              ? "bg-amber-300/15 text-amber-200"
+              : player.rank === 2
+              ? "bg-white/10 text-neutral-300"
+              : player.rank === 3
+              ? "bg-orange-300/10 text-orange-200"
+              : "bg-white/5 text-neutral-500"
+          }`}
+        >
+          {player.rank}
+        </span>
+
+        <span className="text-xs text-neutral-600 sm:hidden">
+          Rank
+        </span>
+      </div>
+
+      <div role="cell" className="min-w-0">
+        <p className="truncate text-sm font-medium text-neutral-200">
+          {player.name}
+        </p>
+
+        <p className="mt-1 text-xs text-neutral-600 sm:hidden">
+          Level {player.level} · {metricValue}
+        </p>
+      </div>
+
+      <div role="cell" className="hidden text-sm text-neutral-400 sm:block">
+        Level {player.level}
+      </div>
+
+      <div role="cell" className="hidden text-right text-sm font-medium text-amber-200 sm:block">
+        {metricValue}
+      </div>
+    </div>
+  );
+}
+
+export default Dashboard;

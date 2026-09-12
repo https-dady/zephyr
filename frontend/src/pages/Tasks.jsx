@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
@@ -63,24 +63,7 @@ function Tasks() {
     [token]
   );
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!token) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    fetchTasks();
-  }, [authLoading, token, navigate]);
-
-  useEffect(() => {
-    return () => {
-      feedbackTimersRef.current.forEach((timer) => clearTimeout(timer));
-    };
-  }, []);
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoadingTasks(true);
       setError("");
@@ -112,7 +95,28 @@ function Tasks() {
     } finally {
       setLoadingTasks(false);
     }
-  };
+  }, [authHeaders, refreshUser]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchTasks();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [authLoading, token, navigate, fetchTasks]);
+
+  useEffect(() => {
+    return () => {
+      feedbackTimersRef.current.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
 
   const handleAuthError = async (message) => {
     if (message === "Token expired" || message === "Invalid token") {

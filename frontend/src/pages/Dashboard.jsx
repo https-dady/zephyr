@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
@@ -164,24 +164,7 @@ function Dashboard() {
     [token]
   );
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!token || !user) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
-    fetchTasks();
-  }, [authLoading, token, user, navigate]);
-
-  useEffect(() => {
-    if (!token) return;
-
-    fetchLeaderboard();
-  }, [token, leaderboardMetric, leaderboardLimit]);
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       setLoadingTasks(true);
       setTasksError("");
@@ -213,9 +196,9 @@ function Dashboard() {
     } finally {
       setLoadingTasks(false);
     }
-  };
+  }, [authHeaders, refreshUser]);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       setLoadingLeaderboard(true);
       setLeaderboardError("");
@@ -253,7 +236,32 @@ function Dashboard() {
     } finally {
       setLoadingLeaderboard(false);
     }
-  };
+  }, [authHeaders, leaderboardMetric, leaderboardLimit, refreshUser]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!token || !user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchTasks();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [authLoading, token, user, navigate, fetchTasks]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const timer = setTimeout(() => {
+      fetchLeaderboard();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [token, fetchLeaderboard]);
 
   const completedTasks = tasks.filter(
     (task) => task.completed

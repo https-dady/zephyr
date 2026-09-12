@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() =>
     localStorage.getItem("token")
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem("token")));
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem("token");
@@ -77,11 +77,14 @@ export function AuthProvider({ children }) {
     const storedToken = localStorage.getItem("token");
 
     if (!storedToken) {
-      setLoading(false);
       return;
     }
 
-    fetchCurrentUser(storedToken);
+    const timer = setTimeout(() => {
+      fetchCurrentUser(storedToken);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [fetchCurrentUser]);
 
   const login = useCallback((authToken, userData = null) => {
@@ -131,6 +134,7 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
 

@@ -159,7 +159,10 @@ function Profile() {
     longest: 0,
   };
 
-  const inventory = user?.inventory || [];
+  const inventory = useMemo(
+    () => user?.inventory || [],
+    [user?.inventory]
+  );
 
   const initials =
     user?.name?.trim()?.charAt(0)?.toUpperCase() || "A";
