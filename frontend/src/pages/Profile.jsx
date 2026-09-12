@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -45,65 +46,85 @@ function getXPRequiredForLevel(level) {
 function Profile() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const {
+    user,
+    token,
+    loading: authLoading,
+    refreshUser,
+  } = useAuth();
 
-  const token = localStorage.getItem("token");
-
-  const authHeaders = useMemo(
-    () => ({
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    }),
-    [token]
-  );
+  const [rewards, setRewards] = useState([]);
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+  const [rewardsError, setRewardsError] = useState("");
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
+    if (authLoading) {
       return;
     }
 
-    fetchProfile();
-  }, [token, navigate]);
-
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: "GET",
-        headers: authHeaders,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to load your profile"
-        );
-      }
-
-      setUser(result.data.user);
-    } catch (err) {
-      console.error("Profile error:", err);
-
-      if (
-        err.message === "Token expired" ||
-        err.message === "Invalid token"
-      ) {
-        localStorage.removeItem("token");
-        navigate("/login");
-        return;
-      }
-
-      setError(err.message || "Unable to load your profile");
-    } finally {
-      setLoading(false);
+    if (!token) {
+      navigate("/login", { replace: true });
     }
-  };
+  }, [authLoading, token, navigate]);
+
+  useEffect(() => {
+    if (!token || authLoading) {
+      return;
+    }
+
+    if (!user) {
+      refreshUser();
+    }
+  }, [token, authLoading, user, refreshUser]);
+
+  useEffect(() => {
+    if (!token || authLoading) {
+      return;
+    }
+
+    const fetchRewards = async () => {
+      try {
+        setRewardsLoading(true);
+        setRewardsError("");
+
+        const response = await fetch(`${API_BASE_URL}/rewards`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || "Unable to load rewards"
+          );
+        }
+
+        setRewards(result.data?.rewards || []);
+      } catch (error) {
+        console.error("Profile rewards error:", error);
+
+        if (
+          error.message === "Token expired" ||
+          error.message === "Invalid token"
+        ) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        setRewardsError(
+          error.message || "Unable to load rewards"
+        );
+      } finally {
+        setRewardsLoading(false);
+      }
+    };
+
+    fetchRewards();
+  }, [token, authLoading, navigate]);
 
   const currentLevel = user?.level || 1;
   const currentXp = user?.xp || 0;
@@ -143,69 +164,117 @@ function Profile() {
   const initials =
     user?.name?.trim()?.charAt(0)?.toUpperCase() || "A";
 
-  if (loading) {
+  const inventoryRewards = useMemo(() => {
+    if (!inventory.length) {
+      return [];
+    }
+
+    return inventory.map((entry, index) => {
+      if (
+        entry?.reward &&
+        typeof entry.reward === "object"
+      ) {
+        return {
+          entry,
+          reward: entry.reward,
+          index,
+        };
+      }
+
+      const rewardId =
+        typeof entry?.reward === "string"
+          ? entry.reward
+          : entry?.reward?._id ||
+            entry?.reward?.id ||
+            null;
+
+      if (!rewardId) {
+        return {
+          entry,
+          reward: null,
+          index,
+        };
+      }
+
+      const matchedReward = rewards.find(
+        (reward) =>
+          String(reward?._id) === String(rewardId)
+      );
+
+      return {
+        entry,
+        reward: matchedReward || null,
+        index,
+      };
+    });
+  }, [inventory, rewards]);
+
+  if (authLoading || (!user && token)) {
     return (
       <main className="min-h-screen bg-neutral-950 text-white">
         <Navbar />
 
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-48 rounded-3xl bg-white/[0.04]" />
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="h-48 animate-pulse rounded-3xl bg-white/[0.04]"
+            />
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[1, 2, 3, 4].map((item) => (
-                <div
+                <motion.div
                   key={item}
-                  className="h-28 rounded-2xl bg-white/[0.03]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: item * 0.05 }}
+                  className="h-28 animate-pulse rounded-2xl bg-white/[0.03]"
                 />
               ))}
             </div>
 
-            <div className="h-80 rounded-3xl bg-white/[0.03]" />
+            <div className="h-80 animate-pulse rounded-3xl bg-white/[0.03]" />
           </div>
         </div>
       </main>
     );
   }
 
-  if (error || !user) {
-    return (
-      <main className="min-h-screen bg-neutral-950 text-white">
-        <Navbar />
-
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <section className="rounded-3xl border border-red-400/20 bg-red-400/[0.05] p-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-red-400/10 text-red-300">
-              !
-            </div>
-
-            <h1 className="mt-4 text-xl font-semibold">
-              Unable to load profile
-            </h1>
-
-            <p className="mt-2 text-sm text-red-300">
-              {error || "Your profile could not be loaded."}
-            </p>
-
-            <button
-              type="button"
-              onClick={fetchProfile}
-              className="mt-5 rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200"
-            >
-              Try Again
-            </button>
-          </section>
-        </div>
-      </main>
-    );
+  if (!user) {
+    return null;
   }
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl" />
+      {/* AMBIENT BACKGROUND */}
 
-        <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl" />
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <motion.div
+          animate={{
+            scale: [1, 1.08, 1],
+            opacity: [0.4, 0.65, 0.4],
+          }}
+          transition={{
+            duration: 9,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl"
+        />
+
+        <motion.div
+          animate={{
+            scale: [1.08, 1, 1.08],
+            opacity: [0.3, 0.55, 0.3],
+          }}
+          transition={{
+            duration: 11,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl"
+        />
       </div>
 
       <div className="relative">
@@ -213,7 +282,13 @@ function Profile() {
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           {/* PAGE HEADER */}
-          <section className="mb-8">
+
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-8"
+          >
             <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-amber-300/80">
               Character Profile
             </p>
@@ -226,29 +301,106 @@ function Profile() {
               Everything you've built through your real-world quests,
               gathered in one place.
             </p>
-          </section>
+          </motion.section>
 
           {/* CHARACTER HERO */}
+
           <motion.section
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]"
+            initial={{
+              opacity: 0,
+              y: 22,
+              scale: 0.985,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              scale: 1,
+            }}
+            transition={{
+              duration: 0.5,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            whileHover={{
+              y: -2,
+            }}
+            className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] transition-shadow duration-500 hover:shadow-[0_20px_70px_rgba(0,0,0,0.18)]"
           >
-            <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-amber-300/10 blur-3xl" />
+            <motion.div
+              animate={{
+                scale: [1, 1.12, 1],
+                opacity: [0.45, 0.7, 0.45],
+              }}
+              transition={{
+                duration: 7,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-amber-300/10 blur-3xl"
+            />
 
             <div className="relative p-6 sm:p-8">
               <div className="flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
                 <div className="flex items-center gap-5">
-                  <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border border-amber-300/20 bg-amber-300/[0.08] text-4xl font-bold text-amber-200 shadow-[0_0_45px_rgba(252,211,77,0.08)]">
+                  {/* AVATAR */}
+
+                  <motion.div
+                    initial={{
+                      scale: 0.7,
+                      opacity: 0,
+                    }}
+                    animate={{
+                      scale: 1,
+                      opacity: 1,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 250,
+                      damping: 18,
+                      delay: 0.1,
+                    }}
+                    whileHover={{
+                      scale: 1.04,
+                      rotate: 1,
+                    }}
+                    className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-3xl border border-amber-300/20 bg-amber-300/[0.08] text-4xl font-bold text-amber-200 shadow-[0_0_45px_rgba(252,211,77,0.08)]"
+                  >
                     {initials}
 
-                    <div className="absolute -bottom-2 -right-2 flex h-9 min-w-9 items-center justify-center rounded-xl border border-neutral-900 bg-amber-300 px-2 text-xs font-bold text-neutral-950">
+                    <motion.div
+                      initial={{
+                        scale: 0,
+                        opacity: 0,
+                      }}
+                      animate={{
+                        scale: 1,
+                        opacity: 1,
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 16,
+                        delay: 0.3,
+                      }}
+                      className="absolute -bottom-2 -right-2 flex h-9 min-w-9 items-center justify-center rounded-xl border border-neutral-900 bg-amber-300 px-2 text-xs font-bold text-neutral-950"
+                    >
                       {currentLevel}
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
 
-                  <div>
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      x: -10,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                    }}
+                    transition={{
+                      duration: 0.35,
+                      delay: 0.18,
+                    }}
+                  >
                     <p className="text-xs font-medium uppercase tracking-[0.2em] text-amber-300/70">
                       Adventurer
                     </p>
@@ -260,18 +412,24 @@ function Profile() {
                     <p className="mt-2 text-sm text-neutral-500">
                       {user.email}
                     </p>
-                  </div>
+                  </motion.div>
                 </div>
 
-                <Link
-                  to="/tasks"
-                  className="inline-flex w-fit items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
                 >
-                  Continue Questing →
-                </Link>
+                  <Link
+                    to="/tasks"
+                    className="inline-flex w-fit items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 shadow-[0_8px_25px_rgba(252,211,77,0.06)] transition hover:bg-amber-200 hover:shadow-[0_10px_30px_rgba(252,211,77,0.12)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                  >
+                    Continue Questing →
+                  </Link>
+                </motion.div>
               </div>
 
               {/* LEVEL */}
+
               <div className="mt-8 border-t border-white/5 pt-7">
                 <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                   <div>
@@ -279,25 +437,47 @@ function Profile() {
                       Current Level
                     </p>
 
-                    <div className="mt-1 flex items-baseline gap-2">
-                      <span className="text-3xl font-bold">
-                        Level {currentLevel}
-                      </span>
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={`${currentLevel}-${currentXp}`}
+                        initial={{
+                          opacity: 0,
+                          y: 5,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                        }}
+                        transition={{
+                          duration: 0.25,
+                        }}
+                        className="mt-1 flex items-baseline gap-2"
+                      >
+                        <span className="text-3xl font-bold">
+                          Level {currentLevel}
+                        </span>
 
-                      <span className="text-sm text-neutral-600">
-                        {currentXp} XP
-                      </span>
-                    </div>
+                        <span className="text-sm text-neutral-600">
+                          {currentXp} XP
+                        </span>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
-                  <p className="text-sm text-amber-200">
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-sm text-amber-200"
+                  >
                     {Math.max(
                       0,
                       nextLevelXP - currentXp
                     )}{" "}
                     XP to Level {currentLevel + 1}
-                  </p>
+                  </motion.p>
                 </div>
+
+                {/* XP BAR */}
 
                 <div
                   className="mt-4 h-3 overflow-hidden rounded-full bg-neutral-900"
@@ -313,39 +493,53 @@ function Profile() {
                       width: `${levelProgress}%`,
                     }}
                     transition={{
-                      duration: 0.9,
-                      ease: "easeOut",
+                      duration: 1.1,
+                      ease: [0.22, 1, 0.36, 1],
                     }}
                     className="relative h-full rounded-full bg-amber-300"
                   >
-                    <div className="absolute right-0 top-0 h-full w-14 bg-white/30 blur-sm" />
+                    <motion.div
+                      animate={{
+                        x: ["-100%", "250%"],
+                      }}
+                      transition={{
+                        duration: 2.2,
+                        repeat: Infinity,
+                        repeatDelay: 2.5,
+                        ease: "easeInOut",
+                      }}
+                      className="absolute inset-y-0 w-1/3 skew-x-[-18deg] bg-white/25 blur-sm"
+                    />
                   </motion.div>
                 </div>
 
                 <div className="mt-2 flex justify-between text-xs text-neutral-600">
-                  <span>
-                    {currentLevelXP} XP
-                  </span>
+                  <span>{currentLevelXP} XP</span>
 
-                  <span className="text-amber-300/70">
+                  <motion.span
+                    key={levelProgress}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-amber-300/70"
+                  >
                     {levelProgress}% complete
-                  </span>
+                  </motion.span>
 
-                  <span>
-                    {nextLevelXP} XP
-                  </span>
+                  <span>{nextLevelXP} XP</span>
                 </div>
               </div>
             </div>
           </motion.section>
 
           {/* OVERVIEW STATS */}
+
           <section className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <ProfileStat
               label="Level"
               value={currentLevel}
               suffix="current"
               icon="LVL"
+              delay={0}
             />
 
             <ProfileStat
@@ -353,6 +547,7 @@ function Profile() {
               value={currentXp}
               suffix="earned"
               icon="XP"
+              delay={0.05}
             />
 
             <ProfileStat
@@ -360,6 +555,7 @@ function Profile() {
               value={user.currency || 0}
               suffix="coins"
               icon="◈"
+              delay={0.1}
             />
 
             <ProfileStat
@@ -367,12 +563,31 @@ function Profile() {
               value={streak.current || 0}
               suffix="days"
               icon="🔥"
+              delay={0.15}
             />
           </section>
 
           {/* CHARACTER ATTRIBUTES */}
+
           <section className="mb-8">
-            <div className="mb-5">
+            <motion.div
+              initial={{
+                opacity: 0,
+                y: 10,
+              }}
+              whileInView={{
+                opacity: 1,
+                y: 0,
+              }}
+              viewport={{
+                once: true,
+                amount: 0.2,
+              }}
+              transition={{
+                duration: 0.35,
+              }}
+              className="mb-5"
+            >
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
                 Character Build
               </p>
@@ -384,11 +599,12 @@ function Profile() {
               <p className="mt-1 text-sm leading-6 text-neutral-500">
                 The stats you've developed through your quests.
               </p>
-            </div>
+            </motion.div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {ATTRIBUTE_CONFIG.map((attribute, index) => {
-                const value = attributes[attribute.key] || 0;
+                const value =
+                  attributes[attribute.key] || 0;
 
                 const progress = Math.min(
                   100,
@@ -398,19 +614,46 @@ function Profile() {
                 return (
                   <motion.article
                     key={attribute.key}
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.35,
-                      delay: index * 0.06,
+                    initial={{
+                      opacity: 0,
+                      y: 18,
+                      scale: 0.985,
                     }}
-                    className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-amber-300/20 hover:bg-white/[0.045] sm:p-6"
+                    whileInView={{
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                    }}
+                    viewport={{
+                      once: true,
+                      amount: 0.15,
+                    }}
+                    transition={{
+                      duration: 0.4,
+                      delay: index * 0.07,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    whileHover={{
+                      y: -5,
+                    }}
+                    className="group rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition-colors duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] hover:shadow-[0_18px_45px_rgba(0,0,0,0.16)] sm:p-6"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/5 text-amber-200">
+                        <motion.div
+                          whileHover={{
+                            scale: 1.08,
+                            rotate: 4,
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 15,
+                          }}
+                          className="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-300/15 bg-amber-300/5 text-amber-200"
+                        >
                           {attribute.icon}
-                        </div>
+                        </motion.div>
 
                         <div>
                           <p className="text-[10px] font-bold tracking-[0.18em] text-amber-300/60">
@@ -423,9 +666,25 @@ function Profile() {
                         </div>
                       </div>
 
-                      <span className="text-3xl font-bold">
+                      <motion.span
+                        key={value}
+                        initial={{
+                          scale: 0.85,
+                          opacity: 0.5,
+                        }}
+                        animate={{
+                          scale: 1,
+                          opacity: 1,
+                        }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 350,
+                          damping: 18,
+                        }}
+                        className="text-3xl font-bold"
+                      >
                         {value}
-                      </span>
+                      </motion.span>
                     </div>
 
                     <p className="mt-5 text-sm leading-6 text-neutral-500">
@@ -453,15 +712,21 @@ function Profile() {
                       >
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{
+                          whileInView={{
                             width: `${progress}%`,
                           }}
-                          transition={{
-                            duration: 0.7,
-                            delay: index * 0.06,
+                          viewport={{
+                            once: true,
                           }}
-                          className="h-full rounded-full bg-amber-300"
-                        />
+                          transition={{
+                            duration: 0.8,
+                            delay: index * 0.08,
+                            ease: "easeOut",
+                          }}
+                          className="relative h-full rounded-full bg-amber-300"
+                        >
+                          <div className="absolute right-0 top-0 h-full w-8 bg-white/25 blur-sm" />
+                        </motion.div>
                       </div>
                     </div>
                   </motion.article>
@@ -470,87 +735,50 @@ function Profile() {
             </div>
           </section>
 
-          {/* STREAK + PERSONAL BEST */}
+          {/* STREAK */}
+
           <section className="mb-8 grid gap-4 lg:grid-cols-2">
-            <motion.article
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-3xl border border-amber-300/15 bg-amber-300/[0.04] p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-amber-300/60">
-                    Consistency
-                  </p>
+            <StreakCard
+              title="Current Streak"
+              eyebrow="Consistency"
+              value={streak.current || 0}
+              icon="🔥"
+              description="Keep completing quests on consecutive days to maintain your momentum."
+              highlight
+              delay={0}
+            />
 
-                  <h2 className="mt-1 text-lg font-semibold">
-                    Current Streak
-                  </h2>
-                </div>
-
-                <span className="text-2xl">
-                  🔥
-                </span>
-              </div>
-
-              <div className="mt-7 flex items-baseline gap-2">
-                <span className="text-5xl font-bold">
-                  {streak.current || 0}
-                </span>
-
-                <span className="text-sm text-neutral-500">
-                  days
-                </span>
-              </div>
-
-              <p className="mt-3 text-sm leading-6 text-neutral-500">
-                Keep completing quests on consecutive days to
-                maintain your momentum.
-              </p>
-            </motion.article>
-
-            <motion.article
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.06 }}
-              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-                    Personal Best
-                  </p>
-
-                  <h2 className="mt-1 text-lg font-semibold">
-                    Longest Streak
-                  </h2>
-                </div>
-
-                <span className="text-2xl">
-                  🏆
-                </span>
-              </div>
-
-              <div className="mt-7 flex items-baseline gap-2">
-                <span className="text-5xl font-bold">
-                  {streak.longest || 0}
-                </span>
-
-                <span className="text-sm text-neutral-500">
-                  days
-                </span>
-              </div>
-
-              <p className="mt-3 text-sm leading-6 text-neutral-500">
-                Your longest consecutive run since starting your
-                journey.
-              </p>
-            </motion.article>
+            <StreakCard
+              title="Longest Streak"
+              eyebrow="Personal Best"
+              value={streak.longest || 0}
+              icon="🏆"
+              description="Your longest consecutive run since starting your journey."
+              delay={0.08}
+            />
           </section>
 
           {/* INVENTORY */}
+
           <section className="mb-8">
-            <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <motion.div
+              initial={{
+                opacity: 0,
+                y: 10,
+              }}
+              whileInView={{
+                opacity: 1,
+                y: 0,
+              }}
+              viewport={{
+                once: true,
+                amount: 0.2,
+              }}
+              transition={{
+                duration: 0.35,
+              }}
+              className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"
+            >
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
                   Collection
@@ -565,19 +793,50 @@ function Profile() {
                 </p>
               </div>
 
-              <Link
-                to="/rewards"
-                className="text-sm font-medium text-amber-300 transition hover:text-amber-200"
+              <motion.div
+                whileHover={{ x: 3 }}
+                whileTap={{ scale: 0.97 }}
               >
-                Visit Reward Shop →
-              </Link>
-            </div>
+                <Link
+                  to="/rewards"
+                  className="text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                >
+                  Visit Reward Shop →
+                </Link>
+              </motion.div>
+            </motion.div>
 
             {inventory.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200">
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  scale: 0.98,
+                }}
+                whileInView={{
+                  opacity: 1,
+                  scale: 1,
+                }}
+                viewport={{
+                  once: true,
+                }}
+                transition={{
+                  duration: 0.35,
+                }}
+                className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center"
+              >
+                <motion.div
+                  animate={{
+                    y: [0, -4, 0],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200"
+                >
                   ◈
-                </div>
+                </motion.div>
 
                 <h3 className="mt-5 font-semibold">
                   Your inventory is empty
@@ -588,82 +847,189 @@ function Profile() {
                   first reward.
                 </p>
 
-                <Link
-                  to="/rewards"
-                  className="mt-5 inline-flex rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200"
+                <motion.div
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="mt-5 inline-block"
                 >
-                  Explore Rewards
-                </Link>
-              </div>
+                  <Link
+                    to="/rewards"
+                    className="inline-flex rounded-xl bg-amber-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-200"
+                  >
+                    Explore Rewards
+                  </Link>
+                </motion.div>
+              </motion.div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {inventory.map((entry, index) => {
-                  const reward =
-                    typeof entry.reward === "object"
-                      ? entry.reward
-                      : null;
+                {inventoryRewards.map(
+                  ({ entry, reward, index }) => {
+                    const rewardName =
+                      reward?.name || "Reward";
 
-                  const rewardName =
-                    reward?.name || "Reward";
+                    const rewardDescription =
+                      reward?.description ||
+                      "An unlocked reward from your journey.";
 
-                  const rewardDescription =
-                    reward?.description ||
-                    "An unlocked reward from your journey.";
+                    const rewardType =
+                      reward?.type || "item";
 
-                  const rewardType =
-                    reward?.type || "item";
+                    return (
+                      <motion.article
+                        key={
+                          reward?._id ||
+                          entry?._id ||
+                          index
+                        }
+                        initial={{
+                          opacity: 0,
+                          y: 18,
+                          scale: 0.98,
+                        }}
+                        whileInView={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                        }}
+                        viewport={{
+                          once: true,
+                          amount: 0.12,
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          delay: index * 0.06,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                        whileHover={{
+                          y: -6,
+                          scale: 1.008,
+                        }}
+                        className="group overflow-hidden rounded-3xl border border-emerald-300/10 bg-emerald-300/[0.025] shadow-[0_0_25px_rgba(52,211,153,0.015)] transition-shadow duration-300 hover:border-emerald-300/20 hover:shadow-[0_18px_45px_rgba(0,0,0,0.16)]"
+                      >
+                        <div className="relative flex h-32 items-center justify-center overflow-hidden border-b border-white/5 bg-gradient-to-br from-emerald-300/[0.05] to-transparent">
+                          <motion.div
+                            initial={{
+                              scale: 1,
+                              opacity: 0.5,
+                            }}
+                            whileHover={{
+                              scale: 1.15,
+                              opacity: 1,
+                            }}
+                            transition={{
+                              duration: 0.4,
+                            }}
+                            className="absolute h-24 w-24 rounded-full bg-emerald-300/5 blur-2xl"
+                          />
 
-                  return (
-                    <motion.article
-                      key={
-                        reward?._id ||
-                        entry._id ||
-                        index
-                      }
-                      initial={{ opacity: 0, y: 14 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        duration: 0.35,
-                        delay: index * 0.05,
-                      }}
-                      className="overflow-hidden rounded-3xl border border-emerald-300/10 bg-emerald-300/[0.025]"
-                    >
-                      <div className="flex h-32 items-center justify-center border-b border-white/5 bg-gradient-to-br from-emerald-300/[0.05] to-transparent">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-300/5 text-2xl text-emerald-300">
-                          {getInventoryIcon(rewardType)}
+                          <motion.div
+                            whileHover={{
+                              scale: 1.1,
+                              rotate: 4,
+                            }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 280,
+                              damping: 16,
+                            }}
+                            className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-300/5 text-2xl text-emerald-300"
+                          >
+                            {getInventoryIcon(rewardType)}
+                          </motion.div>
+
+                          <motion.span
+                            initial={{
+                              opacity: 0,
+                              scale: 0.8,
+                            }}
+                            animate={{
+                              opacity: 1,
+                              scale: 1,
+                            }}
+                            transition={{
+                              delay: 0.2 + index * 0.04,
+                              type: "spring",
+                              stiffness: 350,
+                              damping: 18,
+                            }}
+                            className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-300/15 bg-neutral-950/70 text-xs text-emerald-300 backdrop-blur"
+                          >
+                            ✓
+                          </motion.span>
                         </div>
-                      </div>
 
-                      <div className="p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-semibold text-neutral-100">
-                            {rewardName}
-                          </h3>
+                        <div className="p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="font-semibold text-neutral-100 transition-colors group-hover:text-white">
+                              {rewardName}
+                            </h3>
 
-                          <span className="shrink-0 rounded-lg border border-emerald-300/15 bg-emerald-300/5 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
-                            {rewardType}
-                          </span>
+                            <span className="shrink-0 rounded-lg border border-emerald-300/15 bg-emerald-300/5 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-300">
+                              {rewardType}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 text-sm leading-6 text-neutral-500">
+                            {rewardDescription}
+                          </p>
+
+                          <div className="mt-4 border-t border-white/5 pt-3">
+                            <span className="text-xs text-emerald-300/70">
+                              ✓ Unlocked
+                            </span>
+                          </div>
                         </div>
-
-                        <p className="mt-2 text-sm leading-6 text-neutral-500">
-                          {rewardDescription}
-                        </p>
-
-                        <div className="mt-4 border-t border-white/5 pt-3">
-                          <span className="text-xs text-emerald-300/70">
-                            ✓ Unlocked
-                          </span>
-                        </div>
-                      </div>
-                    </motion.article>
-                  );
-                })}
+                      </motion.article>
+                    );
+                  }
+                )}
               </div>
             )}
+
+            {inventory.length > 0 &&
+              rewardsLoading && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-3 text-xs text-neutral-600"
+                >
+                  Loading reward details...
+                </motion.p>
+              )}
+
+            {inventory.length > 0 &&
+              !rewardsLoading &&
+              rewardsError && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-3 text-xs text-red-300/70"
+                >
+                  {rewardsError}
+                </motion.p>
+              )}
           </section>
 
           {/* ACCOUNT SUMMARY */}
-          <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
+
+          <motion.section
+            initial={{
+              opacity: 0,
+              y: 14,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            viewport={{
+              once: true,
+              amount: 0.15,
+            }}
+            transition={{
+              duration: 0.4,
+            }}
+            className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 transition hover:border-white/15 hover:bg-white/[0.04] sm:p-7"
+          >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
@@ -682,13 +1048,11 @@ function Profile() {
               <div className="grid grid-cols-2 gap-3">
                 <SummaryItem
                   label="Attributes"
-                  value={
-                    Object.values(attributes).reduce(
-                      (total, value) =>
-                        total + (value || 0),
-                      0
-                    )
-                  }
+                  value={Object.values(attributes).reduce(
+                    (total, value) =>
+                      total + (value || 0),
+                    0
+                  )}
                 />
 
                 <SummaryItem
@@ -697,38 +1061,202 @@ function Profile() {
                 />
               </div>
             </div>
-          </section>
+          </motion.section>
         </div>
       </div>
     </main>
   );
 }
 
-function ProfileStat({ label, value, suffix, icon }) {
+function ProfileStat({
+  label,
+  value,
+  suffix,
+  icon,
+  delay = 0,
+}) {
   return (
     <motion.article
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-amber-300/20 hover:bg-white/[0.045]"
+      initial={{
+        opacity: 0,
+        y: 14,
+        scale: 0.98,
+      }}
+      whileInView={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+      }}
+      viewport={{
+        once: true,
+        amount: 0.2,
+      }}
+      transition={{
+        duration: 0.35,
+        delay,
+      }}
+      whileHover={{
+        y: -4,
+        scale: 1.01,
+      }}
+      className="group rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-colors duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] hover:shadow-[0_14px_35px_rgba(0,0,0,0.14)]"
     >
       <div className="flex items-center justify-between">
         <p className="text-xs uppercase tracking-wider text-neutral-500">
           {label}
         </p>
 
-        <span className="text-xs font-bold text-amber-300/60">
+        <motion.span
+          whileHover={{
+            scale: 1.15,
+            rotate: 4,
+          }}
+          className="text-xs font-bold text-amber-300/60"
+        >
           {icon}
-        </span>
+        </motion.span>
       </div>
 
-      <div className="mt-3 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold">
-          {value}
-        </span>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={value}
+          initial={{
+            opacity: 0,
+            y: 5,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          transition={{
+            duration: 0.2,
+          }}
+          className="mt-3 flex items-baseline gap-2"
+        >
+          <span className="text-2xl font-semibold">
+            {value}
+          </span>
 
-        <span className="text-xs text-neutral-600">
-          {suffix}
-        </span>
+          <span className="text-xs text-neutral-600">
+            {suffix}
+          </span>
+        </motion.div>
+      </AnimatePresence>
+    </motion.article>
+  );
+}
+
+function StreakCard({
+  title,
+  eyebrow,
+  value,
+  icon,
+  description,
+  highlight = false,
+  delay = 0,
+}) {
+  return (
+    <motion.article
+      initial={{
+        opacity: 0,
+        y: 16,
+      }}
+      whileInView={{
+        opacity: 1,
+        y: 0,
+      }}
+      viewport={{
+        once: true,
+        amount: 0.15,
+      }}
+      transition={{
+        duration: 0.4,
+        delay,
+      }}
+      whileHover={{
+        y: -5,
+      }}
+      className={`group relative overflow-hidden rounded-3xl p-6 transition-shadow duration-300 ${
+        highlight
+          ? "border border-amber-300/15 bg-amber-300/[0.04] hover:shadow-[0_18px_50px_rgba(252,211,77,0.05)]"
+          : "border border-white/10 bg-white/[0.03] hover:border-white/15 hover:shadow-[0_18px_50px_rgba(0,0,0,0.15)]"
+      }`}
+    >
+      <motion.div
+        initial={{
+          opacity: 0,
+          scale: 0.8,
+        }}
+        whileHover={{
+          opacity: 1,
+          scale: 1,
+        }}
+        className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-300/5 blur-3xl"
+      />
+
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div>
+            <p
+              className={`text-xs uppercase tracking-[0.18em] ${
+                highlight
+                  ? "text-amber-300/60"
+                  : "text-neutral-600"
+              }`}
+            >
+              {eyebrow}
+            </p>
+
+            <h2 className="mt-1 text-lg font-semibold">
+              {title}
+            </h2>
+          </div>
+
+          <motion.span
+            whileHover={{
+              scale: 1.15,
+              rotate: 6,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 15,
+            }}
+            className="text-2xl"
+          >
+            {icon}
+          </motion.span>
+        </div>
+
+        <motion.div
+          key={value}
+          initial={{
+            opacity: 0,
+            scale: 0.9,
+          }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 250,
+            damping: 18,
+          }}
+          className="mt-7 flex items-baseline gap-2"
+        >
+          <span className="text-5xl font-bold">
+            {value}
+          </span>
+
+          <span className="text-sm text-neutral-500">
+            days
+          </span>
+        </motion.div>
+
+        <p className="mt-3 text-sm leading-6 text-neutral-500">
+          {description}
+        </p>
       </div>
     </motion.article>
   );
@@ -736,15 +1264,33 @@ function ProfileStat({ label, value, suffix, icon }) {
 
 function SummaryItem({ label, value }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-black/20 px-4 py-3 text-center">
-      <p className="text-lg font-semibold text-neutral-200">
-        {value}
-      </p>
+    <motion.div
+      whileHover={{
+        y: -2,
+      }}
+      className="rounded-xl border border-white/5 bg-black/20 px-4 py-3 text-center transition-colors hover:border-amber-300/10 hover:bg-black/30"
+    >
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={value}
+          initial={{
+            opacity: 0,
+            y: 4,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+          className="text-lg font-semibold text-neutral-200"
+        >
+          {value}
+        </motion.p>
+      </AnimatePresence>
 
       <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">
         {label}
       </p>
-    </div>
+    </motion.div>
   );
 }
 

@@ -161,9 +161,8 @@ function Rewards() {
       }
 
       /*
-       * The backend remains authoritative for currency
-       * and inventory. Refresh the user after a successful
-       * purchase so the UI reflects the persisted state.
+       * Backend remains authoritative for currency
+       * and inventory.
        */
       await fetchUser();
 
@@ -223,9 +222,31 @@ function Rewards() {
   return (
     <main className="min-h-screen bg-neutral-950 text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl" />
+        <motion.div
+          animate={{
+            scale: [1, 1.08, 1],
+            opacity: [0.45, 0.7, 0.45],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-amber-400/5 blur-3xl"
+        />
 
-        <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl" />
+        <motion.div
+          animate={{
+            scale: [1.08, 1, 1.08],
+            opacity: [0.35, 0.6, 0.35],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-amber-500/5 blur-3xl"
+        />
       </div>
 
       <div className="relative">
@@ -233,62 +254,155 @@ function Rewards() {
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           {/* HEADER */}
+
           <section className="mb-8">
             <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
               <div>
-                <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-amber-300/80">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35 }}
+                  className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-amber-300/80"
+                >
                   Adventurer Rewards
-                </p>
+                </motion.p>
 
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                <motion.h1
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.04,
+                  }}
+                  className="text-3xl font-semibold tracking-tight sm:text-4xl"
+                >
                   Reward Shop
-                </h1>
+                </motion.h1>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base">
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{
+                    duration: 0.4,
+                    delay: 0.1,
+                  }}
+                  className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base"
+                >
                   Spend the currency you've earned from completing
                   your quests and unlock rewards for your journey.
-                </p>
+                </motion.p>
               </div>
 
               {/* CURRENCY */}
+
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex w-fit items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3"
+                initial={{
+                  opacity: 0,
+                  y: 14,
+                  scale: 0.97,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                }}
+                transition={{
+                  duration: 0.45,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                whileHover={{
+                  y: -3,
+                  scale: 1.015,
+                }}
+                className="group flex w-fit items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 shadow-[0_0_30px_rgba(252,211,77,0.03)] transition-shadow duration-300 hover:shadow-[0_0_35px_rgba(252,211,77,0.08)]"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-200">
+                <motion.div
+                  animate={{
+                    rotate: [0, 4, -4, 0],
+                  }}
+                  transition={{
+                    duration: 5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10 text-lg text-amber-200"
+                >
                   ◈
-                </div>
+                </motion.div>
 
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/60">
                     Your Currency
                   </p>
 
-                  <p className="mt-0.5 text-xl font-bold text-white">
-                    {loadingUser ? "—" : currency}
-                    <span className="ml-1.5 text-xs font-medium text-neutral-500">
-                      coins
-                    </span>
-                  </p>
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={currency}
+                      initial={{
+                        opacity: 0,
+                        y: 5,
+                        scale: 0.95,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                      }}
+                      transition={{
+                        duration: 0.22,
+                      }}
+                      className="mt-0.5 text-xl font-bold text-white"
+                    >
+                      {loadingUser ? "—" : currency}
+
+                      <span className="ml-1.5 text-xs font-medium text-neutral-500">
+                        coins
+                      </span>
+                    </motion.p>
+                  </AnimatePresence>
                 </div>
               </motion.div>
             </div>
           </section>
 
           {/* FEEDBACK */}
+
           <AnimatePresence mode="wait">
             {purchaseMessage && (
               <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="mb-6 rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3"
+                initial={{
+                  opacity: 0,
+                  y: -14,
+                  scale: 0.98,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -10,
+                  scale: 0.98,
+                }}
+                transition={{
+                  duration: 0.3,
+                }}
+                className="mb-6 overflow-hidden rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] px-4 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-300">
+                  <motion.span
+                    initial={{ scale: 0.5, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 15,
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-300"
+                  >
                     ✓
-                  </span>
+                  </motion.span>
 
                   <p className="text-sm text-emerald-200">
                     {purchaseMessage}
@@ -299,15 +413,36 @@ function Rewards() {
 
             {purchaseError && (
               <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3"
+                initial={{
+                  opacity: 0,
+                  y: -14,
+                  scale: 0.98,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -10,
+                  scale: 0.98,
+                }}
+                className="mb-6 overflow-hidden rounded-2xl border border-red-400/20 bg-red-400/[0.05] px-4 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-400/10 text-red-300">
+                  <motion.span
+                    initial={{ scale: 0.5 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 15,
+                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-400/10 text-red-300"
+                  >
                     !
-                  </span>
+                  </motion.span>
 
                   <p className="text-sm text-red-300">
                     {purchaseError}
@@ -318,7 +453,22 @@ function Rewards() {
           </AnimatePresence>
 
           {/* FILTER */}
-          <section className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center">
+
+          <motion.section
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.35,
+              delay: 0.12,
+            }}
+            className="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center"
+          >
             <div>
               <p className="text-xs uppercase tracking-[0.16em] text-neutral-600">
                 Browse Rewards
@@ -333,50 +483,98 @@ function Rewards() {
               className="flex max-w-full gap-2 overflow-x-auto pb-1"
               aria-label="Reward categories"
             >
-              {REWARD_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => setSelectedType(type.value)}
-                  aria-pressed={selectedType === type.value}
-                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
-                    selectedType === type.value
-                      ? "bg-amber-300 text-neutral-950"
-                      : "border border-white/10 bg-white/[0.03] text-neutral-400 hover:border-amber-300/20 hover:text-neutral-200"
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
+              {REWARD_TYPES.map((type) => {
+                const isSelected =
+                  selectedType === type.value;
+
+                return (
+                  <motion.button
+                    key={type.value}
+                    type="button"
+                    onClick={() =>
+                      setSelectedType(type.value)
+                    }
+                    aria-pressed={isSelected}
+                    whileHover={{
+                      y: -1,
+                    }}
+                    whileTap={{
+                      scale: 0.96,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 20,
+                    }}
+                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                      isSelected
+                        ? "bg-amber-300 text-neutral-950 shadow-[0_0_20px_rgba(252,211,77,0.12)]"
+                        : "border border-white/10 bg-white/[0.03] text-neutral-400 hover:border-amber-300/20 hover:text-neutral-200"
+                    }`}
+                  >
+                    {type.label}
+                  </motion.button>
+                );
+              })}
             </div>
-          </section>
+          </motion.section>
 
           {/* ERROR */}
-          {error && !loadingRewards && (
-            <section className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-5">
-              <p className="text-sm text-red-300">
-                {error}
-              </p>
 
-              <button
-                type="button"
-                onClick={() => {
-                  fetchRewards();
-                  fetchUser();
+          <AnimatePresence>
+            {error && !loadingRewards && (
+              <motion.section
+                initial={{
+                  opacity: 0,
+                  y: -10,
                 }}
-                className="mt-3 text-sm font-medium text-amber-300 transition hover:text-amber-200"
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                exit={{
+                  opacity: 0,
+                  y: -10,
+                }}
+                className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/[0.05] p-5"
               >
-                Try again →
-              </button>
-            </section>
-          )}
+                <p className="text-sm text-red-300">
+                  {error}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchRewards();
+                    fetchUser();
+                  }}
+                  className="mt-3 text-sm font-medium text-amber-300 transition hover:text-amber-200"
+                >
+                  Try again →
+                </button>
+              </motion.section>
+            )}
+          </AnimatePresence>
 
           {/* LOADING */}
+
           {loadingRewards && (
             <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((item) => (
-                <div
+                <motion.div
                   key={item}
+                  initial={{
+                    opacity: 0,
+                    y: 10,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  transition={{
+                    duration: 0.3,
+                    delay: item * 0.04,
+                  }}
                   className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]"
                 >
                   <div className="h-48 animate-pulse bg-white/5" />
@@ -390,203 +588,504 @@ function Rewards() {
 
                     <div className="h-11 w-full animate-pulse rounded-xl bg-white/10" />
                   </div>
-                </div>
+                </motion.div>
               ))}
             </section>
           )}
 
           {/* EMPTY */}
-          {!loadingRewards &&
-            !error &&
-            filteredRewards.length === 0 && (
-              <section className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200">
-                  ◈
-                </div>
 
-                <h2 className="mt-5 text-lg font-semibold">
-                  No rewards available
-                </h2>
+          <AnimatePresence mode="wait">
+            {!loadingRewards &&
+              !error &&
+              filteredRewards.length === 0 && (
+                <motion.section
+                  initial={{
+                    opacity: 0,
+                    scale: 0.98,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                  }}
+                  transition={{
+                    duration: 0.3,
+                  }}
+                  className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-12 text-center"
+                >
+                  <motion.div
+                    animate={{
+                      y: [0, -4, 0],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200"
+                  >
+                    ◈
+                  </motion.div>
 
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">
-                  There are currently no rewards in this category.
-                </p>
-              </section>
-            )}
+                  <h2 className="mt-5 text-lg font-semibold">
+                    No rewards available
+                  </h2>
+
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-neutral-500">
+                    There are currently no rewards in this category.
+                  </p>
+                </motion.section>
+              )}
+          </AnimatePresence>
 
           {/* REWARDS */}
+
           {!loadingRewards &&
             !error &&
             filteredRewards.length > 0 && (
-              <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredRewards.map((reward, index) => {
-                  const isOwned = ownedRewardIds.has(
-                    String(reward._id)
-                  );
+              <motion.section
+                layout
+                className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                <AnimatePresence mode="popLayout">
+                  {filteredRewards.map((reward, index) => {
+                    const isOwned = ownedRewardIds.has(
+                      String(reward._id)
+                    );
 
-                  const canAfford =
-                    currency >= (reward.cost || 0);
+                    const canAfford =
+                      currency >= (reward.cost || 0);
 
-                  const isPurchasing =
-                    purchasingId === reward._id;
+                    const isPurchasing =
+                      purchasingId === reward._id;
 
-                  return (
-                    <motion.article
-                      key={reward._id}
-                      initial={{
-                        opacity: 0,
-                        y: 18,
-                      }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                      }}
-                      transition={{
-                        duration: 0.35,
-                        delay: index * 0.05,
-                      }}
-                      className={`group relative overflow-hidden rounded-3xl border bg-white/[0.03] transition duration-300 ${
-                        isOwned
-                          ? "border-emerald-300/15"
-                          : "border-white/10 hover:border-amber-300/20 hover:bg-white/[0.045]"
-                      }`}
-                    >
-                      {/* VISUAL AREA */}
-                      <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-white/5 bg-gradient-to-br from-amber-300/[0.08] via-transparent to-transparent">
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(252,211,77,0.08),transparent_55%)]" />
+                    return (
+                      <motion.article
+                        key={reward._id}
+                        layout
+                        initial={{
+                          opacity: 0,
+                          y: 24,
+                          scale: 0.97,
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                        }}
+                        exit={{
+                          opacity: 0,
+                          y: -10,
+                          scale: 0.97,
+                        }}
+                        transition={{
+                          duration: 0.35,
+                          delay: index * 0.05,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
+                        whileHover={
+                          isOwned
+                            ? {
+                                y: -4,
+                              }
+                            : {
+                                y: -7,
+                                scale: 1.008,
+                              }
+                        }
+                        className={`group relative overflow-hidden rounded-3xl border bg-white/[0.03] transition duration-300 ${
+                          isOwned
+                            ? "border-emerald-300/15 shadow-[0_0_25px_rgba(52,211,153,0.025)]"
+                            : "border-white/10 hover:border-amber-300/20 hover:bg-white/[0.045] hover:shadow-[0_18px_50px_rgba(0,0,0,0.22)]"
+                        }`}
+                      >
+                        {/* HOVER LIGHT */}
 
-                        {reward.image ? (
-                          <img
-                            src={reward.image}
-                            alt={reward.name}
-                            className="relative h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                          />
-                        ) : (
+                        <motion.div
+                          initial={{
+                            opacity: 0,
+                          }}
+                          whileHover={{
+                            opacity: 1,
+                          }}
+                          transition={{
+                            duration: 0.25,
+                          }}
+                          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-amber-300/40"
+                        />
+
+                        {/* VISUAL AREA */}
+
+                        <div className="relative flex h-48 items-center justify-center overflow-hidden border-b border-white/5 bg-gradient-to-br from-amber-300/[0.08] via-transparent to-transparent">
                           <motion.div
+                            initial={{
+                              opacity: 0.6,
+                              scale: 1,
+                            }}
                             whileHover={{
-                              scale: 1.08,
-                              rotate: 3,
+                              opacity: 1,
+                              scale: 1.12,
                             }}
                             transition={{
-                              type: "spring",
-                              stiffness: 250,
-                              damping: 15,
+                              duration: 0.45,
                             }}
-                            className="relative flex h-24 w-24 items-center justify-center rounded-3xl border border-amber-300/20 bg-amber-300/[0.06] text-4xl text-amber-200 shadow-[0_0_50px_rgba(252,211,77,0.08)]"
-                          >
-                            {getRewardIcon(reward.type)}
-                          </motion.div>
-                        )}
+                            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(252,211,77,0.08),transparent_55%)]"
+                          />
 
-                        {/* TYPE */}
-                        <span className="absolute left-4 top-4 rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-400 backdrop-blur">
-                          {reward.type}
-                        </span>
+                          {/* DECORATIVE ORBIT */}
 
-                        {/* OWNED */}
-                        {isOwned && (
-                          <span className="absolute right-4 top-4 flex items-center gap-1.5 rounded-lg border border-emerald-300/20 bg-neutral-950/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300 backdrop-blur">
-                            <span>✓</span>
-                            Owned
+                          <motion.div
+                            animate={{
+                              rotate: 360,
+                            }}
+                            transition={{
+                              duration: 18,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                            className="pointer-events-none absolute h-32 w-32 rounded-full border border-amber-300/[0.04]"
+                          />
+
+                          {reward.image ? (
+                            <motion.img
+                              src={reward.image}
+                              alt={reward.name}
+                              whileHover={{
+                                scale: 1.06,
+                              }}
+                              transition={{
+                                duration: 0.45,
+                              }}
+                              className="relative h-full w-full object-cover"
+                            />
+                          ) : (
+                            <motion.div
+                              whileHover={{
+                                scale: 1.1,
+                                rotate: 4,
+                              }}
+                              whileTap={{
+                                scale: 0.96,
+                              }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 250,
+                                damping: 15,
+                              }}
+                              className={`relative flex h-24 w-24 items-center justify-center rounded-3xl border text-4xl shadow-[0_0_50px_rgba(252,211,77,0.08)] ${
+                                isOwned
+                                  ? "border-emerald-300/20 bg-emerald-300/[0.06] text-emerald-300"
+                                  : "border-amber-300/20 bg-amber-300/[0.06] text-amber-200"
+                              }`}
+                            >
+                              {getRewardIcon(reward.type)}
+                            </motion.div>
+                          )}
+
+                          {/* TYPE */}
+
+                          <span className="absolute left-4 top-4 rounded-lg border border-white/10 bg-neutral-950/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-neutral-400 backdrop-blur">
+                            {reward.type}
                           </span>
-                        )}
-                      </div>
 
-                      {/* CONTENT */}
-                      <div className="p-5">
-                        <div className="min-h-[96px]">
-                          <h2 className="text-lg font-semibold text-neutral-100">
-                            {reward.name}
-                          </h2>
+                          {/* OWNED */}
 
-                          <p className="mt-2 line-clamp-3 text-sm leading-6 text-neutral-500">
-                            {reward.description ||
-                              "A reward for your character journey."}
-                          </p>
+                          <AnimatePresence>
+                            {isOwned && (
+                              <motion.span
+                                initial={{
+                                  opacity: 0,
+                                  scale: 0.8,
+                                  x: 8,
+                                }}
+                                animate={{
+                                  opacity: 1,
+                                  scale: 1,
+                                  x: 0,
+                                }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 350,
+                                  damping: 18,
+                                }}
+                                className="absolute right-4 top-4 flex items-center gap-1.5 rounded-lg border border-emerald-300/20 bg-neutral-950/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300 backdrop-blur"
+                              >
+                                <motion.span
+                                  initial={{
+                                    scale: 0,
+                                  }}
+                                  animate={{
+                                    scale: 1,
+                                  }}
+                                  transition={{
+                                    delay: 0.1,
+                                    type: "spring",
+                                    stiffness: 450,
+                                    damping: 15,
+                                  }}
+                                >
+                                  ✓
+                                </motion.span>
+
+                                Owned
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
                         </div>
 
-                        {/* PRICE */}
-                        <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
-                          <div>
-                            <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-                              Cost
+                        {/* CONTENT */}
+
+                        <div className="p-5">
+                          <div className="min-h-[96px]">
+                            <motion.h2
+                              layout="position"
+                              className="text-lg font-semibold text-neutral-100 transition-colors duration-300 group-hover:text-white"
+                            >
+                              {reward.name}
+                            </motion.h2>
+
+                            <p className="mt-2 line-clamp-3 text-sm leading-6 text-neutral-500">
+                              {reward.description ||
+                                "A reward for your character journey."}
                             </p>
-
-                            <div className="mt-1 flex items-center gap-1.5">
-                              <span className="text-lg text-amber-300">
-                                ◈
-                              </span>
-
-                              <span className="text-lg font-bold text-neutral-200">
-                                {reward.cost || 0}
-                              </span>
-
-                              <span className="text-xs text-neutral-600">
-                                coins
-                              </span>
-                            </div>
                           </div>
 
-                          {!isOwned && !canAfford && (
-                            <span className="text-right text-[10px] uppercase tracking-wider text-red-300/70">
-                              Not enough
-                            </span>
-                          )}
+                          {/* PRICE */}
 
-                          {!isOwned && canAfford && (
-                            <span className="text-right text-[10px] uppercase tracking-wider text-amber-300/60">
-                              Available
+                          <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                                Cost
+                              </p>
+
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <motion.span
+                                  whileHover={{
+                                    scale: 1.12,
+                                    rotate: 5,
+                                  }}
+                                  className="text-lg text-amber-300"
+                                >
+                                  ◈
+                                </motion.span>
+
+                                <span className="text-lg font-bold text-neutral-200">
+                                  {reward.cost || 0}
+                                </span>
+
+                                <span className="text-xs text-neutral-600">
+                                  coins
+                                </span>
+                              </div>
+                            </div>
+
+                            <AnimatePresence mode="wait">
+                              {!isOwned &&
+                                !canAfford && (
+                                  <motion.span
+                                    key="not-enough"
+                                    initial={{
+                                      opacity: 0,
+                                      x: 5,
+                                    }}
+                                    animate={{
+                                      opacity: 1,
+                                      x: 0,
+                                    }}
+                                    className="text-right text-[10px] uppercase tracking-wider text-red-300/70"
+                                  >
+                                    Not enough
+                                  </motion.span>
+                                )}
+
+                              {!isOwned &&
+                                canAfford && (
+                                  <motion.span
+                                    key="available"
+                                    initial={{
+                                      opacity: 0,
+                                      x: 5,
+                                    }}
+                                    animate={{
+                                      opacity: 1,
+                                      x: 0,
+                                    }}
+                                    className="text-right text-[10px] uppercase tracking-wider text-amber-300/60"
+                                  >
+                                    Available
+                                  </motion.span>
+                                )}
+
+                              {isOwned && (
+                                <motion.span
+                                  key="unlocked"
+                                  initial={{
+                                    opacity: 0,
+                                    x: 5,
+                                  }}
+                                  animate={{
+                                    opacity: 1,
+                                    x: 0,
+                                  }}
+                                  className="text-right text-[10px] uppercase tracking-wider text-emerald-300/60"
+                                >
+                                  Unlocked
+                                </motion.span>
+                              )}
+                            </AnimatePresence>
+                          </div>
+
+                          {/* ACTION */}
+
+                          <motion.button
+                            type="button"
+                            onClick={() =>
+                              handlePurchase(reward)
+                            }
+                            disabled={
+                              isOwned ||
+                              !canAfford ||
+                              isPurchasing ||
+                              loadingUser
+                            }
+                            whileHover={
+                              !isOwned &&
+                              canAfford &&
+                              !loadingUser
+                                ? {
+                                    y: -2,
+                                  }
+                                : undefined
+                            }
+                            whileTap={
+                              !isOwned &&
+                              canAfford &&
+                              !loadingUser
+                                ? {
+                                    scale: 0.975,
+                                  }
+                                : undefined
+                            }
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 20,
+                            }}
+                            className={`relative mt-5 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
+                              isOwned
+                                ? "cursor-default border border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-300"
+                                : !canAfford
+                                ? "cursor-not-allowed border border-white/5 bg-white/[0.02] text-neutral-600"
+                                : "bg-amber-300 text-neutral-950 shadow-[0_8px_25px_rgba(252,211,77,0.08)] hover:bg-amber-200 hover:shadow-[0_10px_30px_rgba(252,211,77,0.14)]"
+                            }`}
+                          >
+                            {/* BUTTON SHIMMER */}
+
+                            {!isOwned &&
+                              canAfford &&
+                              !isPurchasing && (
+                                <motion.span
+                                  initial={{
+                                    x: "-120%",
+                                  }}
+                                  animate={{
+                                    x: "120%",
+                                  }}
+                                  transition={{
+                                    duration: 2.2,
+                                    repeat: Infinity,
+                                    repeatDelay: 3,
+                                    ease: "easeInOut",
+                                  }}
+                                  className="pointer-events-none absolute inset-y-0 w-1/3 skew-x-[-18deg] bg-white/20 blur-sm"
+                                />
+                              )}
+
+                            <span className="relative z-10 flex items-center gap-2">
+                              {isPurchasing ? (
+                                <>
+                                  <motion.span
+                                    animate={{
+                                      rotate: 360,
+                                    }}
+                                    transition={{
+                                      duration: 0.8,
+                                      repeat: Infinity,
+                                      ease: "linear",
+                                    }}
+                                    className="h-4 w-4 rounded-full border-2 border-neutral-950/30 border-t-neutral-950"
+                                  />
+
+                                  Purchasing...
+                                </>
+                              ) : isOwned ? (
+                                <>
+                                  <motion.span
+                                    initial={{
+                                      scale: 0.5,
+                                    }}
+                                    animate={{
+                                      scale: 1,
+                                    }}
+                                    transition={{
+                                      type: "spring",
+                                      stiffness: 400,
+                                      damping: 15,
+                                    }}
+                                  >
+                                    ✓
+                                  </motion.span>
+
+                                  In Inventory
+                                </>
+                              ) : !canAfford ? (
+                                "Need More Coins"
+                              ) : (
+                                <>
+                                  Purchase
+
+                                  <motion.span
+                                    animate={{
+                                      x: [0, 3, 0],
+                                    }}
+                                    transition={{
+                                      duration: 1.5,
+                                      repeat: Infinity,
+                                      ease: "easeInOut",
+                                    }}
+                                  >
+                                    →
+                                  </motion.span>
+                                </>
+                              )}
                             </span>
-                          )}
+                          </motion.button>
                         </div>
-
-                        {/* ACTION */}
-                        <button
-                          type="button"
-                          onClick={() => handlePurchase(reward)}
-                          disabled={
-                            isOwned ||
-                            !canAfford ||
-                            isPurchasing ||
-                            loadingUser
-                          }
-                          className={`mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${
-                            isOwned
-                              ? "cursor-default border border-emerald-300/15 bg-emerald-300/[0.06] text-emerald-300"
-                              : !canAfford
-                              ? "cursor-not-allowed border border-white/5 bg-white/[0.02] text-neutral-600"
-                              : "bg-amber-300 text-neutral-950 hover:bg-amber-200"
-                          }`}
-                        >
-                          {isPurchasing ? (
-                            <>
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950/30 border-t-neutral-950" />
-                              Purchasing...
-                            </>
-                          ) : isOwned ? (
-                            <>
-                              <span>✓</span>
-                              In Inventory
-                            </>
-                          ) : !canAfford ? (
-                            "Need More Coins"
-                          ) : (
-                            <>
-                              Purchase
-                              <span>→</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </motion.article>
-                  );
-                })}
-              </section>
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.section>
             )}
 
           {/* FOOTER INFO */}
+
           {!loadingRewards && rewards.length > 0 && (
-            <section className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6">
+            <motion.section
+              initial={{
+                opacity: 0,
+                y: 12,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.4,
+                delay: 0.2,
+              }}
+              className="mt-8 rounded-3xl border border-white/10 bg-white/[0.02] p-5 sm:p-6"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium text-neutral-300">
@@ -599,15 +1098,21 @@ function Rewards() {
                   </p>
                 </div>
 
-                <button
+                <motion.button
                   type="button"
                   onClick={() => navigate("/tasks")}
-                  className="w-fit text-sm font-medium text-amber-300 transition hover:text-amber-200"
+                  whileHover={{
+                    x: 3,
+                  }}
+                  whileTap={{
+                    scale: 0.97,
+                  }}
+                  className="w-fit text-sm font-medium text-amber-300 transition hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                 >
                   Go to Quests →
-                </button>
+                </motion.button>
               </div>
-            </section>
+            </motion.section>
           )}
         </div>
       </div>
