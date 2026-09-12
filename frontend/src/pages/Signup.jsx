@@ -55,6 +55,8 @@ function Signup() {
     setIsLoading(true);
 
     try {
+      const email = formData.email.trim();
+
       const response = await fetch(
         "http://localhost:5000/api/auth/signup",
         {
@@ -64,7 +66,7 @@ function Signup() {
           },
           body: JSON.stringify({
             name: formData.name.trim(),
-            email: formData.email.trim(),
+            email,
             password: formData.password,
           }),
         }
@@ -79,23 +81,32 @@ function Signup() {
         );
       }
 
+      /*
+       * Store the signup email so the verification page
+       * can recover it even after a refresh.
+       */
+      localStorage.setItem("pending_signup_email", email);
+
       setSuccess(
         result.message ||
           "Account created successfully. Please verify your email."
       );
 
       /*
-       * The existing backend authentication flow uses
-       * email verification before login.
-       *
-       * We do not create a new verification route here.
-       * The user can continue through the already-established
+       * Email verification is part of the existing
        * authentication flow.
+       *
+       * The backend sends the OTP during signup.
+       * Redirect directly to the verification screen.
        */
-      setTimeout(() => {
-        navigate("/login");
-      }, 1200);
+      navigate("/verify-email", {
+        state: {
+          email,
+        },
+      });
     } catch (submitError) {
+      console.error("Signup error:", submitError);
+
       setError(
         submitError.message ||
           "Something went wrong. Please try again."

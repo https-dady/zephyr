@@ -5,11 +5,14 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 
 import Dashboard from "./pages/Dashboard";
 import Tasks from "./pages/Tasks";
 import Rewards from "./pages/Rewards";
 import Profile from "./pages/Profile";
+
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   const location = useLocation();
@@ -30,18 +33,43 @@ function App() {
         <Routes location={location}>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
+
           <Route path="/login" element={<Login />} />
+
           <Route path="/signup" element={<Signup />} />
+
           <Route
             path="/forgot-password"
             element={<ForgotPassword />}
           />
 
+          <Route
+            path="/verify-email"
+            element={<VerifyEmail />}
+          />
+
           {/* Protected Routes */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/rewards" element={<Rewards />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
+
+            <Route
+              path="/tasks"
+              element={<Tasks />}
+            />
+
+            <Route
+              path="/rewards"
+              element={<Rewards />}
+            />
+
+            <Route
+              path="/profile"
+              element={<Profile />}
+            />
+          </Route>
         </Routes>
       </motion.div>
     </AnimatePresence>

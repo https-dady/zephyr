@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import Container from "../components/Container";
-import Button from "../components/Button";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -24,6 +23,30 @@ function ForgotPassword() {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  /* =========================================================
+     RESEND OTP COOLDOWN
+  ========================================================== */
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setResendCooldown((previous) =>
+        previous > 0 ? previous - 1 : 0
+      );
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  /* =========================================================
+     CLEAR MESSAGES
+  ========================================================== */
+
   const clearMessages = () => {
     setError("");
     setSuccess("");
@@ -37,6 +60,14 @@ function ForgotPassword() {
     event.preventDefault();
 
     clearMessages();
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setError("Please enter your account email.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -48,7 +79,7 @@ function ForgotPassword() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: email.trim(),
+            email: normalizedEmail,
           }),
         }
       );
@@ -62,12 +93,70 @@ function ForgotPassword() {
         );
       }
 
+      setEmail(normalizedEmail);
+
       setSuccess(
         result.message ||
           "Reset OTP has been sent to your email."
       );
 
+      setResendCooldown(60);
       setStep(2);
+    } catch (submitError) {
+      setError(
+        submitError.message ||
+          "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* =========================================================
+     RESEND RESET OTP
+     Uses the existing forgot-password endpoint.
+     No new backend route is required.
+  ========================================================== */
+
+  const handleResendOtp = async () => {
+    if (isLoading || resendCooldown > 0) {
+      return;
+    }
+
+    clearMessages();
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email.trim().toLowerCase(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            "Unable to resend reset OTP. Please try again."
+        );
+      }
+
+      setOtp("");
+
+      setSuccess(
+        result.message ||
+          "A new reset OTP has been sent to your email."
+      );
+
+      setResendCooldown(60);
     } catch (submitError) {
       setError(
         submitError.message ||
@@ -86,6 +175,12 @@ function ForgotPassword() {
     event.preventDefault();
 
     clearMessages();
+
+    if (otp.trim().length !== 6) {
+      setError("Please enter the 6-digit OTP.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -97,7 +192,7 @@ function ForgotPassword() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: email.trim(),
+            email: email.trim().toLowerCase(),
             otp: otp.trim(),
           }),
         }
@@ -138,14 +233,17 @@ function ForgotPassword() {
     clearMessages();
 
     if (
-      passwordData.password !== passwordData.confirmPassword
+      passwordData.password !==
+      passwordData.confirmPassword
     ) {
       setError("Passwords do not match.");
       return;
     }
 
     if (passwordData.password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+      setError(
+        "Password must be at least 6 characters long."
+      );
       return;
     }
 
@@ -159,10 +257,16 @@ function ForgotPassword() {
           headers: {
             "Content-Type": "application/json",
           },
+
+          /*
+           * IMPORTANT:
+           * Backend expects `newPassword`,
+           * not `password`.
+           */
           body: JSON.stringify({
-            email: email.trim(),
+            email: email.trim().toLowerCase(),
             otp: otp.trim(),
-            password: passwordData.password,
+            newPassword: passwordData.password,
           }),
         }
       );
@@ -176,14 +280,19 @@ function ForgotPassword() {
         );
       }
 
-      setSuccess(
-        result.message ||
-          "Password reset successfully. Redirecting to login..."
-      );
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      /*
+       * Password reset is successful.
+       *
+       * Redirect immediately to login.
+       * No alert/popup and no delayed timeout.
+       */
+      navigate("/login", {
+        replace: true,
+        state: {
+          passwordReset: true,
+          email: email.trim().toLowerCase(),
+        },
+      });
     } catch (submitError) {
       setError(
         submitError.message ||
@@ -193,6 +302,10 @@ function ForgotPassword() {
       setIsLoading(false);
     }
   };
+
+  /* =========================================================
+     PASSWORD INPUT CHANGE
+  ========================================================== */
 
   const handlePasswordChange = (event) => {
     const { name, value } = event.target;
@@ -205,6 +318,10 @@ function ForgotPassword() {
     clearMessages();
   };
 
+  /* =========================================================
+     BACK TO LOGIN
+  ========================================================== */
+
   const goBackToLogin = () => {
     navigate("/login");
   };
@@ -214,6 +331,7 @@ function ForgotPassword() {
       {/* =========================================================
           BACKGROUND ATMOSPHERE
       ========================================================== */}
+
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-[-180px] h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-amber-400/10 blur-[140px]" />
 
@@ -227,10 +345,14 @@ function ForgotPassword() {
           {/* =====================================================
               LEFT RPG MESSAGE
           ====================================================== */}
+
           <motion.div
             initial={{ opacity: 0, x: -24 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
+            transition={{
+              duration: 0.7,
+              ease: "easeOut",
+            }}
             className="hidden lg:block"
           >
             <div className="max-w-md">
@@ -247,9 +369,10 @@ function ForgotPassword() {
               </h1>
 
               <p className="mt-6 text-base leading-8 text-neutral-500">
-                Forgot your password? Recover your account securely
-                and get back to completing quests, building your
-                character and progressing through your journey.
+                Forgot your password? Recover your account
+                securely and get back to completing quests,
+                building your character and progressing through
+                your journey.
               </p>
 
               <div className="mt-10 space-y-3">
@@ -272,8 +395,14 @@ function ForgotPassword() {
                 ].map((item, index) => (
                   <motion.div
                     key={item.number}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{
+                      opacity: 0,
+                      y: 12,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
                     transition={{
                       duration: 0.45,
                       delay: 0.25 + index * 0.1,
@@ -302,11 +431,21 @@ function ForgotPassword() {
           {/* =====================================================
               FORGOT PASSWORD CARD
           ====================================================== */}
+
           <motion.div
             key={step}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            initial={{
+              opacity: 0,
+              y: 20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.35,
+              ease: "easeOut",
+            }}
             className="mx-auto w-full max-w-md"
           >
             <div className="relative">
@@ -314,6 +453,7 @@ function ForgotPassword() {
 
               <div className="relative rounded-[30px] border border-white/10 bg-neutral-900/85 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
                 {/* Header */}
+
                 <div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-lg text-amber-300 shadow-[0_0_30px_rgba(252,211,77,0.07)]">
                     {step === 1 && "↗"}
@@ -342,6 +482,7 @@ function ForgotPassword() {
                 {/* =================================================
                     STEP INDICATOR
                 ================================================== */}
+
                 <div className="mt-7 grid grid-cols-3 gap-2">
                   {["Email", "Verify", "Reset"].map(
                     (label, index) => {
@@ -375,10 +516,17 @@ function ForgotPassword() {
                 {/* =================================================
                     MESSAGES
                 ================================================== */}
+
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
                     className="mt-6 rounded-2xl border border-red-400/15 bg-red-400/5 px-4 py-3"
                     role="alert"
                   >
@@ -390,8 +538,14 @@ function ForgotPassword() {
 
                 {success && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{
+                      opacity: 0,
+                      y: -8,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
                     className="mt-6 rounded-2xl border border-amber-300/15 bg-amber-300/5 px-4 py-3"
                     role="status"
                   >
@@ -404,6 +558,7 @@ function ForgotPassword() {
                 {/* =================================================
                     STEP 1 — EMAIL
                 ================================================== */}
+
                 {step === 1 && (
                   <form
                     onSubmit={handleEmailSubmit}
@@ -458,6 +613,7 @@ function ForgotPassword() {
                 {/* =================================================
                     STEP 2 — OTP
                 ================================================== */}
+
                 {step === 2 && (
                   <form
                     onSubmit={handleOtpSubmit}
@@ -495,8 +651,10 @@ function ForgotPassword() {
                     </div>
 
                     <p className="text-center text-xs leading-5 text-neutral-700">
-                      Check the email address you entered in the
-                      previous step.
+                      Reset code sent to{" "}
+                      <span className="text-neutral-500">
+                        {email}
+                      </span>
                     </p>
 
                     <button
@@ -519,12 +677,35 @@ function ForgotPassword() {
                         </>
                       )}
                     </button>
+
+                    {/* Resend OTP */}
+
+                    <div className="flex items-center justify-center gap-2 text-xs">
+                      <span className="text-neutral-700">
+                        Didn't receive the code?
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={
+                          isLoading ||
+                          resendCooldown > 0
+                        }
+                        className="font-medium text-amber-300/70 transition-colors hover:text-amber-300 disabled:cursor-not-allowed disabled:text-neutral-700"
+                      >
+                        {resendCooldown > 0
+                          ? `Resend in ${resendCooldown}s`
+                          : "Resend OTP"}
+                      </button>
+                    </div>
                   </form>
                 )}
 
                 {/* =================================================
                     STEP 3 — NEW PASSWORD
                 ================================================== */}
+
                 {step === 3 && (
                   <form
                     onSubmit={handlePasswordSubmit}
@@ -565,7 +746,9 @@ function ForgotPassword() {
                         name="confirmPassword"
                         type="password"
                         autoComplete="new-password"
-                        value={passwordData.confirmPassword}
+                        value={
+                          passwordData.confirmPassword
+                        }
                         onChange={handlePasswordChange}
                         placeholder="Enter the password again"
                         required
@@ -575,7 +758,8 @@ function ForgotPassword() {
                     </div>
 
                     <p className="text-[11px] text-neutral-700">
-                      Password must be at least 6 characters long.
+                      Password must be at least 6 characters
+                      long.
                     </p>
 
                     <button
@@ -602,6 +786,7 @@ function ForgotPassword() {
                 )}
 
                 {/* Back to Login */}
+
                 <button
                   type="button"
                   onClick={goBackToLogin}
@@ -612,6 +797,7 @@ function ForgotPassword() {
                 </button>
 
                 {/* Login link */}
+
                 <p className="mt-5 text-center text-[11px] leading-5 text-neutral-700">
                   Remembered your password?{" "}
                   <Link

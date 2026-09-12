@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -102,7 +103,13 @@ function getStreakMessage(currentStreak) {
 function Dashboard() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
+  const {
+    user,
+    loading: authLoading,
+    token,
+    refreshUser,
+  } = useAuth();
+
   const [tasks, setTasks] = useState([]);
 
   const [leaderboard, setLeaderboard] = useState([]);
@@ -111,15 +118,11 @@ function Dashboard() {
   const [leaderboardMetric, setLeaderboardMetric] = useState("xp");
   const [leaderboardLimit, setLeaderboardLimit] = useState(10);
 
-  const [loadingUser, setLoadingUser] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
 
-  const [userError, setUserError] = useState("");
   const [tasksError, setTasksError] = useState("");
   const [leaderboardError, setLeaderboardError] = useState("");
-
-  const token = localStorage.getItem("token");
 
   const authHeaders = useMemo(
     () => ({
@@ -130,55 +133,21 @@ function Dashboard() {
   );
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
+    if (authLoading) return;
+
+    if (!token || !user) {
+      navigate("/login", { replace: true });
       return;
     }
 
-    fetchUser();
     fetchTasks();
-  }, [token, navigate]);
+  }, [authLoading, token, user, navigate]);
 
   useEffect(() => {
     if (!token) return;
 
     fetchLeaderboard();
   }, [token, leaderboardMetric, leaderboardLimit]);
-
-  const fetchUser = async () => {
-    try {
-      setLoadingUser(true);
-      setUserError("");
-
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: "GET",
-        headers: authHeaders,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Unable to load your profile");
-      }
-
-      setUser(result.data.user);
-    } catch (error) {
-      console.error("Dashboard user error:", error);
-
-      if (
-        error.message === "Token expired" ||
-        error.message === "Invalid token"
-      ) {
-        localStorage.removeItem("token");
-        navigate("/login");
-        return;
-      }
-
-      setUserError(error.message || "Unable to load dashboard");
-    } finally {
-      setLoadingUser(false);
-    }
-  };
 
   const fetchTasks = async () => {
     try {
@@ -204,8 +173,7 @@ function Dashboard() {
         error.message === "Token expired" ||
         error.message === "Invalid token"
       ) {
-        localStorage.removeItem("token");
-        navigate("/login");
+        await refreshUser();
         return;
       }
 
@@ -243,8 +211,7 @@ function Dashboard() {
         error.message === "Token expired" ||
         error.message === "Invalid token"
       ) {
-        localStorage.removeItem("token");
-        navigate("/login");
+        await refreshUser();
         return;
       }
 
@@ -256,7 +223,10 @@ function Dashboard() {
     }
   };
 
-  const completedTasks = tasks.filter((task) => task.completed).length;
+  const completedTasks = tasks.filter(
+    (task) => task.completed
+  ).length;
+
   const totalTasks = tasks.length;
 
   const taskProgress =
@@ -268,7 +238,9 @@ function Dashboard() {
   const currentXp = user?.xp || 0;
 
   const currentLevelXP = getXPRequiredForLevel(currentLevel);
-  const nextLevelXP = getXPRequiredForLevel(currentLevel + 1);
+  const nextLevelXP = getXPRequiredForLevel(
+    currentLevel + 1
+  );
 
   const xpNeededForLevel = nextLevelXP - currentLevelXP;
 
@@ -319,11 +291,14 @@ function Dashboard() {
   const previousStreakMilestone =
     [...streakMilestones]
       .reverse()
-      .find((milestone) => milestone <= currentStreak) || 0;
+      .find(
+        (milestone) => milestone <= currentStreak
+      ) || 0;
 
   const streakRange =
     nextStreakMilestone !== null
-      ? nextStreakMilestone - previousStreakMilestone
+      ? nextStreakMilestone -
+        previousStreakMilestone
       : 30 - previousStreakMilestone;
 
   const streakProgress =
@@ -331,7 +306,8 @@ function Dashboard() {
       ? Math.min(
           100,
           Math.round(
-            ((currentStreak - previousStreakMilestone) /
+            ((currentStreak -
+              previousStreakMilestone) /
               Math.max(1, streakRange)) *
               100
           )
@@ -340,7 +316,8 @@ function Dashboard() {
 
   const selectedMetricLabel =
     LEADERBOARD_METRICS.find(
-      (metric) => metric.value === leaderboardMetric
+      (metric) =>
+        metric.value === leaderboardMetric
     )?.label || "XP";
 
   const getMetricDisplayValue = (player) => {
@@ -384,7 +361,10 @@ function Dashboard() {
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                   Welcome back
-                  {user?.name ? `, ${user.name}` : ""}.
+                  {user?.name
+                    ? `, ${user.name}`
+                    : ""}
+                  .
                 </h1>
 
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400 sm:text-base">
@@ -404,12 +384,14 @@ function Dashboard() {
           </section>
 
           {/* CHARACTER PROGRESSION */}
-          {loadingUser && (
+          {authLoading && (
             <section className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
               <div className="animate-pulse space-y-5">
                 <div className="h-4 w-40 rounded bg-white/10" />
+
                 <div className="h-8 w-64 rounded bg-white/10" />
-                <div className="h-3 w-full rounded-full bg-white/10" />
+
+                <div className="h-3 w-full rounded bg-white/10" />
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="h-20 rounded-2xl bg-white/5" />
@@ -420,15 +402,15 @@ function Dashboard() {
             </section>
           )}
 
-          {userError && !loadingUser && (
+          {tasksError && !loadingTasks && (
             <section className="mb-8 rounded-2xl border border-red-400/20 bg-red-400/5 p-5">
               <p className="text-sm text-red-300">
-                {userError}
+                {tasksError}
               </p>
 
               <button
                 type="button"
-                onClick={fetchUser}
+                onClick={fetchTasks}
                 className="mt-3 text-sm font-medium text-amber-300 hover:text-amber-200"
               >
                 Try again →
@@ -436,11 +418,19 @@ function Dashboard() {
             </section>
           )}
 
-          {!loadingUser && user && (
+          {!authLoading && user && (
             <motion.section
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45 }}
+              initial={{
+                opacity: 0,
+                y: 16,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.45,
+              }}
               className="relative mb-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]"
             >
               <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-300/10 blur-3xl" />
@@ -461,7 +451,8 @@ function Dashboard() {
                       </p>
 
                       <h2 className="mt-1 text-2xl font-semibold">
-                        {user.name || "Adventurer"}
+                        {user.name ||
+                          "Adventurer"}
                       </h2>
 
                       <p className="mt-1 text-sm text-neutral-500">
@@ -473,7 +464,9 @@ function Dashboard() {
                   <div className="flex w-fit items-center gap-3 rounded-2xl border border-amber-300/20 bg-amber-300/5 px-4 py-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-300/10">
                       <span className="text-sm font-bold text-amber-200">
-                        {String(currentLevel).padStart(2, "0")}
+                        {String(
+                          currentLevel
+                        ).padStart(2, "0")}
                       </span>
                     </div>
 
@@ -498,6 +491,7 @@ function Dashboard() {
 
                       <p className="mt-1 text-lg font-semibold">
                         {currentXp} XP
+
                         <span className="ml-2 text-sm font-normal text-neutral-600">
                           total earned
                         </span>
@@ -505,20 +499,25 @@ function Dashboard() {
                     </div>
 
                     <p className="text-sm text-amber-200">
-                      {remainingXp} XP to Level {currentLevel + 1}
+                      {remainingXp} XP to Level{" "}
+                      {currentLevel + 1}
                     </p>
                   </div>
 
                   <div
                     className="relative h-4 overflow-hidden rounded-full border border-white/5 bg-neutral-900"
                     role="progressbar"
-                    aria-valuenow={levelProgress}
+                    aria-valuenow={
+                      levelProgress
+                    }
                     aria-valuemin="0"
                     aria-valuemax="100"
                     aria-label={`Level ${currentLevel} progress: ${levelProgress}%`}
                   >
                     <motion.div
-                      initial={{ width: 0 }}
+                      initial={{
+                        width: 0,
+                      }}
                       animate={{
                         width: `${levelProgress}%`,
                       }}
@@ -533,7 +532,9 @@ function Dashboard() {
                   </div>
 
                   <div className="mt-2 flex items-center justify-between text-xs text-neutral-600">
-                    <span>Level {currentLevel}</span>
+                    <span>
+                      Level {currentLevel}
+                    </span>
 
                     <span className="font-medium text-amber-300/70">
                       {levelProgress}% complete
@@ -569,7 +570,7 @@ function Dashboard() {
           )}
 
           {/* QUICK CHARACTER STATS */}
-          {!loadingUser && user && (
+          {!authLoading && user && (
             <section className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatCard
                 label="Currency"
@@ -626,136 +627,160 @@ function Dashboard() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {ATTRIBUTE_CONFIG.map((attribute, index) => {
-                const value = attributes[attribute.key] || 0;
+              {ATTRIBUTE_CONFIG.map(
+                (attribute, index) => {
+                  const value =
+                    attributes[
+                      attribute.key
+                    ] || 0;
 
-                const attributeProgress = Math.min(
-                  100,
-                  value * 10
-                );
+                  const attributeProgress =
+                    Math.min(100, value * 10);
 
-                const relatedTasks = tasks.filter((task) =>
-                  attribute.categories.includes(task.category)
-                );
+                  const relatedTasks =
+                    tasks.filter((task) =>
+                      attribute.categories.includes(
+                        task.category
+                      )
+                    );
 
-                const completedRelatedTasks = relatedTasks.filter(
-                  (task) => task.completed
-                ).length;
+                  const completedRelatedTasks =
+                    relatedTasks.filter(
+                      (task) => task.completed
+                    ).length;
 
-                return (
-                  <motion.article
-                    key={attribute.key}
-                    initial={{ opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.4,
-                      delay: index * 0.07,
-                    }}
-                    className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] sm:p-6"
-                  >
-                    <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-300/5 blur-3xl transition duration-500 group-hover:bg-amber-300/10" />
+                  return (
+                    <motion.article
+                      key={attribute.key}
+                      initial={{
+                        opacity: 0,
+                        y: 18,
+                      }}
+                      animate={{
+                        opacity: 1,
+                        y: 0,
+                      }}
+                      transition={{
+                        duration: 0.4,
+                        delay: index * 0.07,
+                      }}
+                      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-5 transition duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] sm:p-6"
+                    >
+                      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-300/5 blur-3xl transition duration-500 group-hover:bg-amber-300/10" />
 
-                    <div className="relative">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200">
-                            {attribute.icon}
+                      <div className="relative">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-lg text-amber-200">
+                              {attribute.icon}
+                            </div>
+
+                            <div>
+                              <p className="text-[11px] font-bold tracking-[0.18em] text-amber-300/60">
+                                {attribute.short}
+                              </p>
+
+                              <h3 className="mt-0.5 text-lg font-semibold">
+                                {attribute.label}
+                              </h3>
+                            </div>
                           </div>
 
-                          <div>
-                            <p className="text-[11px] font-bold tracking-[0.18em] text-amber-300/60">
-                              {attribute.short}
+                          <div className="text-right">
+                            <p className="text-3xl font-bold tracking-tight text-white">
+                              {value}
                             </p>
 
-                            <h3 className="mt-0.5 text-lg font-semibold">
-                              {attribute.label}
-                            </h3>
+                            <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                              stat points
+                            </p>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <p className="text-3xl font-bold tracking-tight text-white">
-                            {value}
-                          </p>
+                        <p className="relative mt-5 max-w-md text-sm leading-6 text-neutral-500">
+                          {attribute.description}
+                        </p>
 
-                          <p className="text-[10px] uppercase tracking-wider text-neutral-600">
-                            stat points
-                          </p>
-                        </div>
-                      </div>
+                        <div className="relative mt-6">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                              Character Growth
+                            </span>
 
-                      <p className="relative mt-5 max-w-md text-sm leading-6 text-neutral-500">
-                        {attribute.description}
-                      </p>
+                            <span className="text-xs font-medium text-amber-300/70">
+                              {attributeProgress}%
+                            </span>
+                          </div>
 
-                      <div className="relative mt-6">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-                            Character Growth
-                          </span>
-
-                          <span className="text-xs font-medium text-amber-300/70">
-                            {attributeProgress}%
-                          </span>
-                        </div>
-
-                        <div
-                          className="h-2 overflow-hidden rounded-full bg-neutral-900"
-                          role="progressbar"
-                          aria-valuenow={attributeProgress}
-                          aria-valuemin="0"
-                          aria-valuemax="100"
-                          aria-label={`${attribute.label} growth: ${attributeProgress}%`}
-                        >
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${attributeProgress}%`,
-                            }}
-                            transition={{
-                              duration: 0.8,
-                              delay: index * 0.07,
-                              ease: "easeOut",
-                            }}
-                            className="relative h-full rounded-full bg-amber-300"
+                          <div
+                            className="h-2 overflow-hidden rounded-full bg-neutral-900"
+                            role="progressbar"
+                            aria-valuenow={
+                              attributeProgress
+                            }
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-label={`${attribute.label} growth: ${attributeProgress}%`}
                           >
-                            <div className="absolute right-0 top-0 h-full w-10 bg-white/30 blur-sm" />
-                          </motion.div>
-                        </div>
-                      </div>
-
-                      <div className="relative mt-5 flex items-center justify-between border-t border-white/5 pt-4">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wider text-neutral-600">
-                            Quest Sources
-                          </p>
-
-                          <div className="mt-1 flex flex-wrap gap-1.5">
-                            {attribute.categories.map((category) => (
-                              <span
-                                key={category}
-                                className="rounded-lg border border-white/5 bg-black/20 px-2 py-1 text-[10px] capitalize text-neutral-500"
-                              >
-                                {category}
-                              </span>
-                            ))}
+                            <motion.div
+                              initial={{
+                                width: 0,
+                              }}
+                              animate={{
+                                width: `${attributeProgress}%`,
+                              }}
+                              transition={{
+                                duration: 0.8,
+                                delay:
+                                  index * 0.07,
+                                ease: "easeOut",
+                              }}
+                              className="relative h-full rounded-full bg-amber-300"
+                            >
+                              <div className="absolute right-0 top-0 h-full w-10 bg-white/30 blur-sm" />
+                            </motion.div>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <p className="text-[10px] uppercase tracking-wider text-neutral-600">
-                            Completed
-                          </p>
+                        <div className="relative mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                              Quest Sources
+                            </p>
 
-                          <p className="mt-1 text-sm font-semibold text-neutral-300">
-                            {completedRelatedTasks}
-                          </p>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {attribute.categories.map(
+                                (category) => (
+                                  <span
+                                    key={
+                                      category
+                                    }
+                                    className="rounded-lg border border-white/5 bg-black/20 px-2 py-1 text-[10px] capitalize text-neutral-500"
+                                  >
+                                    {category}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                              Completed
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold text-neutral-300">
+                              {
+                                completedRelatedTasks
+                              }
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.article>
-                );
-              })}
+                    </motion.article>
+                  );
+                }
+              )}
             </div>
           </section>
 
@@ -778,9 +803,17 @@ function Dashboard() {
             <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
               {/* Current streak */}
               <motion.article
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                initial={{
+                  opacity: 0,
+                  y: 18,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.4,
+                }}
                 className="relative overflow-hidden rounded-3xl border border-amber-300/15 bg-amber-300/[0.04] p-6 sm:p-7"
               >
                 <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-300/10 blur-3xl" />
@@ -803,7 +836,8 @@ function Dashboard() {
                           </span>
 
                           <span className="text-sm text-neutral-500">
-                            {currentStreak === 1
+                            {currentStreak ===
+                            1
                               ? "day"
                               : "days"}
                           </span>
@@ -833,9 +867,11 @@ function Dashboard() {
                         Streak Milestones
                       </span>
 
-                      {nextStreakMilestone !== null && (
+                      {nextStreakMilestone !==
+                        null && (
                         <span className="text-xs text-amber-300/70">
-                          {nextStreakMilestone - currentStreak}{" "}
+                          {nextStreakMilestone -
+                            currentStreak}{" "}
                           days to go
                         </span>
                       )}
@@ -844,13 +880,17 @@ function Dashboard() {
                     <div
                       className="relative h-2 rounded-full bg-neutral-900"
                       role="progressbar"
-                      aria-valuenow={streakProgress}
+                      aria-valuenow={
+                        streakProgress
+                      }
                       aria-valuemin="0"
                       aria-valuemax="100"
                       aria-label={`Streak milestone progress: ${streakProgress}%`}
                     >
                       <motion.div
-                        initial={{ width: 0 }}
+                        initial={{
+                          width: 0,
+                        }}
                         animate={{
                           width: `${streakProgress}%`,
                         }}
@@ -863,37 +903,42 @@ function Dashboard() {
                     </div>
 
                     <div className="mt-4 flex justify-between">
-                      {streakMilestones.map((milestone) => {
-                        const reached =
-                          currentStreak >= milestone;
+                      {streakMilestones.map(
+                        (milestone) => {
+                          const reached =
+                            currentStreak >=
+                            milestone;
 
-                        return (
-                          <div
-                            key={milestone}
-                            className="flex flex-col items-center gap-1.5"
-                          >
-                            <span
-                              className={`flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold ${
-                                reached
-                                  ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
-                                  : "border-white/10 bg-white/[0.02] text-neutral-600"
-                              }`}
+                          return (
+                            <div
+                              key={milestone}
+                              className="flex flex-col items-center gap-1.5"
                             >
-                              {reached ? "✓" : milestone}
-                            </span>
+                              <span
+                                className={`flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold ${
+                                  reached
+                                    ? "border-amber-300/30 bg-amber-300/10 text-amber-200"
+                                    : "border-white/10 bg-white/[0.02] text-neutral-600"
+                                }`}
+                              >
+                                {reached
+                                  ? "✓"
+                                  : milestone}
+                              </span>
 
-                            <span
-                              className={`text-[10px] ${
-                                reached
-                                  ? "text-amber-300/70"
-                                  : "text-neutral-700"
-                              }`}
-                            >
-                              {milestone}d
-                            </span>
-                          </div>
-                        );
-                      })}
+                              <span
+                                className={`text-[10px] ${
+                                  reached
+                                    ? "text-amber-300/70"
+                                    : "text-neutral-700"
+                                }`}
+                              >
+                                {milestone}d
+                              </span>
+                            </div>
+                          );
+                        }
+                      )}
                     </div>
                   </div>
                 </div>
@@ -901,9 +946,18 @@ function Dashboard() {
 
               {/* Longest streak */}
               <motion.article
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.08 }}
+                initial={{
+                  opacity: 0,
+                  y: 18,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.4,
+                  delay: 0.08,
+                }}
                 className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7"
               >
                 <div className="flex items-center justify-between">
@@ -929,7 +983,9 @@ function Dashboard() {
                     </span>
 
                     <span className="text-sm text-neutral-500">
-                      {longestStreak === 1 ? "day" : "days"}
+                      {longestStreak === 1
+                        ? "day"
+                        : "days"}
                     </span>
                   </div>
 
@@ -949,7 +1005,8 @@ function Dashboard() {
                         ? `${Math.min(
                             100,
                             Math.round(
-                              (currentStreak / longestStreak) *
+                              (currentStreak /
+                                longestStreak) *
                                 100
                             )
                           )}%`
@@ -977,10 +1034,13 @@ function Dashboard() {
                     aria-label="Current streak compared with personal best"
                   >
                     <motion.div
-                      initial={{ width: 0 }}
+                      initial={{
+                        width: 0,
+                      }}
                       animate={{
                         width: `${
-                          longestStreak > 0
+                          longestStreak >
+                          0
                             ? Math.min(
                                 100,
                                 Math.round(
@@ -999,188 +1059,112 @@ function Dashboard() {
                       className="h-full rounded-full bg-amber-300/80"
                     />
                   </div>
-
-                  {currentStreak >= longestStreak &&
-                    currentStreak > 0 && (
-                      <p className="mt-3 text-xs font-medium text-amber-300/70">
-                        You're matching your personal best.
-                      </p>
-                    )}
                 </div>
               </motion.article>
             </div>
           </section>
 
           {/* QUEST PROGRESS */}
-          <section className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <section className="mb-8">
+            <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
-                  Quest Progress
+                  Daily Progress
                 </p>
 
-                <h2 className="mt-1 text-xl font-semibold">
-                  Your current quests
+                <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                  Quest Progress
                 </h2>
+
+                <p className="mt-1 text-sm leading-6 text-neutral-500">
+                  Turn completed real-world actions into character progression.
+                </p>
               </div>
 
               <Link
                 to="/tasks"
                 className="text-sm font-medium text-amber-300 transition hover:text-amber-200"
               >
-                Manage all quests →
+                Manage Quests →
               </Link>
             </div>
 
-            {loadingTasks && (
-              <div className="mt-6 space-y-3">
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="h-16 animate-pulse rounded-2xl bg-white/5"
-                  />
-                ))}
-              </div>
-            )}
+            <motion.article
+              initial={{
+                opacity: 0,
+                y: 18,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              transition={{
+                duration: 0.4,
+              }}
+              className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7"
+            >
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-xl text-amber-200">
+                    ✓
+                  </div>
 
-            {tasksError && !loadingTasks && (
-              <div className="mt-6 rounded-2xl border border-red-400/20 bg-red-400/5 p-4">
-                <p className="text-sm text-red-300">
-                  {tasksError}
-                </p>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] text-neutral-600">
+                      Completion Rate
+                    </p>
 
-                <button
-                  type="button"
-                  onClick={fetchTasks}
-                  className="mt-2 text-sm font-medium text-amber-300"
-                >
-                  Try again →
-                </button>
-              </div>
-            )}
-
-            {!loadingTasks && !tasksError && totalTasks === 0 && (
-              <div className="mt-6 rounded-2xl border border-dashed border-white/10 bg-black/10 p-8 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-amber-300/10 text-xl text-amber-300">
-                  +
+                    <p className="mt-1 text-2xl font-semibold">
+                      {completedTasks}
+                      <span className="text-sm font-normal text-neutral-600">
+                        {" "}
+                        / {totalTasks} quests
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
-                <h3 className="mt-4 font-semibold">
-                  No quests yet
-                </h3>
+                <div className="w-full max-w-md">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs text-neutral-600">
+                      Overall progress
+                    </span>
 
-                <p className="mt-1 text-sm text-neutral-500">
-                  Start by creating your first real-life quest.
-                </p>
+                    <span className="text-xs font-medium text-amber-300/70">
+                      {taskProgress}%
+                    </span>
+                  </div>
 
-                <Link
-                  to="/tasks"
-                  className="mt-5 inline-flex rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-amber-200"
-                >
-                  Create a Quest
-                </Link>
+                  <div
+                    className="h-2.5 overflow-hidden rounded-full bg-neutral-900"
+                    role="progressbar"
+                    aria-valuenow={taskProgress}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-label={`Quest completion: ${taskProgress}%`}
+                  >
+                    <motion.div
+                      initial={{
+                        width: 0,
+                      }}
+                      animate={{
+                        width: `${taskProgress}%`,
+                      }}
+                      transition={{
+                        duration: 0.8,
+                        ease: "easeOut",
+                      }}
+                      className="h-full rounded-full bg-amber-300"
+                    />
+                  </div>
+                </div>
               </div>
-            )}
-
-            {!loadingTasks &&
-              !tasksError &&
-              totalTasks > 0 && (
-                <>
-                  <div className="mt-6">
-                    <div className="mb-2 flex justify-between text-xs">
-                      <span className="text-neutral-400">
-                        Overall completion
-                      </span>
-
-                      <span className="text-amber-200">
-                        {completedTasks}/{totalTasks}
-                      </span>
-                    </div>
-
-                    <div
-                      className="h-2 overflow-hidden rounded-full bg-neutral-800"
-                      role="progressbar"
-                      aria-valuenow={taskProgress}
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                      aria-label={`Quest completion: ${taskProgress}%`}
-                    >
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${taskProgress}%`,
-                        }}
-                        transition={{
-                          duration: 0.7,
-                          ease: "easeOut",
-                        }}
-                        className="h-full rounded-full bg-amber-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 space-y-3">
-                    {tasks.slice(0, 5).map((task) => (
-                      <div
-                        key={task._id}
-                        className="flex items-center gap-4 rounded-2xl border border-white/5 bg-black/20 p-4"
-                      >
-                        <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-                            task.completed
-                              ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-300"
-                              : "border-amber-300/15 bg-amber-300/5 text-amber-200"
-                          }`}
-                        >
-                          {task.completed ? "✓" : "○"}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <h3
-                            className={`truncate text-sm font-medium ${
-                              task.completed
-                                ? "text-neutral-500 line-through"
-                                : "text-neutral-200"
-                            }`}
-                          >
-                            {task.title}
-                          </h3>
-
-                          {task.category && (
-                            <p className="mt-1 text-xs capitalize text-neutral-600">
-                              {task.category}
-                            </p>
-                          )}
-                        </div>
-
-                        <span
-                          className={`shrink-0 text-xs ${
-                            task.completed
-                              ? "text-emerald-300"
-                              : "text-neutral-500"
-                          }`}
-                        >
-                          {task.completed ? "Completed" : "Active"}
-                        </span>
-                      </div>
-                    ))}
-
-                    {totalTasks > 5 && (
-                      <Link
-                        to="/tasks"
-                        className="block pt-2 text-center text-sm text-neutral-500 transition hover:text-amber-300"
-                      >
-                        View all {totalTasks} quests →
-                      </Link>
-                    )}
-                  </div>
-                </>
-              )}
+            </motion.article>
           </section>
 
           {/* LEADERBOARD */}
-          <section className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <section className="mb-8">
+            <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
                   Global Rankings
@@ -1191,8 +1175,7 @@ function Dashboard() {
                 </h2>
 
                 <p className="mt-1 text-sm text-neutral-500">
-                  See how adventurers are progressing across the
-                  rankings.
+                  See how adventurers are progressing across the rankings.
                 </p>
               </div>
 
@@ -1209,19 +1192,23 @@ function Dashboard() {
                     id="leaderboard-metric"
                     value={leaderboardMetric}
                     onChange={(event) =>
-                      setLeaderboardMetric(event.target.value)
+                      setLeaderboardMetric(
+                        event.target.value
+                      )
                     }
                     className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-300/40 focus:ring-2 focus:ring-amber-300/10 sm:w-44"
                   >
-                    {LEADERBOARD_METRICS.map((metric) => (
-                      <option
-                        key={metric.value}
-                        value={metric.value}
-                        className="bg-neutral-900"
-                      >
-                        {metric.label}
-                      </option>
-                    ))}
+                    {LEADERBOARD_METRICS.map(
+                      (metric) => (
+                        <option
+                          key={metric.value}
+                          value={metric.value}
+                          className="bg-neutral-900"
+                        >
+                          {metric.label}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
 
@@ -1238,20 +1225,24 @@ function Dashboard() {
                     value={leaderboardLimit}
                     onChange={(event) =>
                       setLeaderboardLimit(
-                        Number(event.target.value)
+                        Number(
+                          event.target.value
+                        )
                       )
                     }
                     className="w-full rounded-xl border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-300/40 focus:ring-2 focus:ring-amber-300/10 sm:w-28"
                   >
-                    {LEADERBOARD_LIMITS.map((limit) => (
-                      <option
-                        key={limit}
-                        value={limit}
-                        className="bg-neutral-900"
-                      >
-                        Top {limit}
-                      </option>
-                    ))}
+                    {LEADERBOARD_LIMITS.map(
+                      (limit) => (
+                        <option
+                          key={limit}
+                          value={limit}
+                          className="bg-neutral-900"
+                        >
+                          Top {limit}
+                        </option>
+                      )
+                    )}
                   </select>
                 </div>
               </div>
@@ -1277,30 +1268,33 @@ function Dashboard() {
 
             {loadingLeaderboard && (
               <div className="mt-5 space-y-3">
-                {[1, 2, 3, 4, 5].map((item) => (
-                  <div
-                    key={item}
-                    className="h-16 animate-pulse rounded-2xl bg-white/5"
-                  />
-                ))}
+                {[1, 2, 3, 4, 5].map(
+                  (item) => (
+                    <div
+                      key={item}
+                      className="h-16 animate-pulse rounded-2xl bg-white/5"
+                    />
+                  )
+                )}
               </div>
             )}
 
-            {leaderboardError && !loadingLeaderboard && (
-              <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/5 p-4">
-                <p className="text-sm text-red-300">
-                  {leaderboardError}
-                </p>
+            {leaderboardError &&
+              !loadingLeaderboard && (
+                <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/5 p-4">
+                  <p className="text-sm text-red-300">
+                    {leaderboardError}
+                  </p>
 
-                <button
-                  type="button"
-                  onClick={fetchLeaderboard}
-                  className="mt-2 text-sm font-medium text-amber-300 hover:text-amber-200"
-                >
-                  Try again →
-                </button>
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={fetchLeaderboard}
+                    className="mt-2 text-sm font-medium text-amber-300 hover:text-amber-200"
+                  >
+                    Try again →
+                  </button>
+                </div>
+              )}
 
             {!loadingLeaderboard &&
               !leaderboardError &&
@@ -1318,21 +1312,28 @@ function Dashboard() {
                 <div className="mt-5 overflow-hidden rounded-2xl border border-white/5">
                   <div className="hidden grid-cols-[70px_1fr_120px_150px] border-b border-white/5 bg-black/20 px-5 py-3 text-xs uppercase tracking-wider text-neutral-600 sm:grid">
                     <span>Rank</span>
+
                     <span>Adventurer</span>
+
                     <span>Level</span>
+
                     <span className="text-right">
                       {selectedMetricLabel}
                     </span>
                   </div>
 
                   <div className="divide-y divide-white/5">
-                    {leaderboard.map((player) => (
-                      <LeaderboardRow
-                        key={`${player.rank}-${player.name}`}
-                        player={player}
-                        metricValue={getMetricDisplayValue(player)}
-                      />
-                    ))}
+                    {leaderboard.map(
+                      (player) => (
+                        <LeaderboardRow
+                          key={`${player.rank}-${player.name}`}
+                          player={player}
+                          metricValue={getMetricDisplayValue(
+                            player
+                          )}
+                        />
+                      )
+                    )}
                   </div>
                 </div>
               )}
@@ -1351,8 +1352,7 @@ function Dashboard() {
                 </h2>
 
                 <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">
-                  Turn today's real-world actions into tomorrow's
-                  stronger character.
+                  Turn today's real-world actions into tomorrow's stronger character.
                 </p>
               </div>
 
@@ -1370,7 +1370,11 @@ function Dashboard() {
   );
 }
 
-function ProgressInfo({ label, value, description }) {
+function ProgressInfo({
+  label,
+  value,
+  description,
+}) {
   return (
     <div className="rounded-2xl border border-white/5 bg-black/20 p-4">
       <p className="text-xs uppercase tracking-wider text-neutral-600">
@@ -1388,11 +1392,22 @@ function ProgressInfo({ label, value, description }) {
   );
 }
 
-function StatCard({ label, value, suffix, icon }) {
+function StatCard({
+  label,
+  value,
+  suffix,
+  icon,
+}) {
   return (
     <motion.article
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{
+        opacity: 0,
+        y: 10,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
       className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-amber-300/20 hover:bg-white/[0.045]"
     >
       <div className="flex items-center justify-between">
@@ -1418,7 +1433,10 @@ function StatCard({ label, value, suffix, icon }) {
   );
 }
 
-function LeaderboardRow({ player, metricValue }) {
+function LeaderboardRow({
+  player,
+  metricValue,
+}) {
   const isTopThree = player.rank <= 3;
 
   return (

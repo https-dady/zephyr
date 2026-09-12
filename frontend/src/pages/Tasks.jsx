@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
 import RPGFeedback from "../components/RPGFeedback";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
@@ -24,6 +25,12 @@ const EMPTY_FORM = {
 function Tasks() {
   const navigate = useNavigate();
 
+  const {
+    token,
+    loading: authLoading,
+    refreshUser,
+  } = useAuth();
+
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingTask, setEditingTask] = useState(null);
@@ -42,8 +49,6 @@ function Tasks() {
 
   const feedbackTimersRef = useRef([]);
 
-  const token = localStorage.getItem("token");
-
   const authHeaders = useMemo(
     () => ({
       Authorization: `Bearer ${token}`,
@@ -53,17 +58,21 @@ function Tasks() {
   );
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!token) {
-      navigate("/login");
+      navigate("/login", { replace: true });
       return;
     }
 
     fetchTasks();
-  }, [token, navigate]);
+  }, [authLoading, token, navigate]);
 
   useEffect(() => {
     return () => {
-      feedbackTimersRef.current.forEach((timer) => clearTimeout(timer));
+      feedbackTimersRef.current.forEach((timer) =>
+        clearTimeout(timer)
+      );
     };
   }, []);
 
@@ -91,8 +100,7 @@ function Tasks() {
         err.message === "Token expired" ||
         err.message === "Invalid token"
       ) {
-        localStorage.removeItem("token");
-        navigate("/login");
+        navigate("/login", { replace: true });
         return;
       }
 
@@ -229,7 +237,9 @@ function Tasks() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Unable to complete quest");
+        throw new Error(
+          result.message || "Unable to complete quest"
+        );
       }
 
       const completedTask = result.data.task;
@@ -329,6 +339,8 @@ function Tasks() {
         }, 800)
       );
 
+      await refreshUser();
+
       setSuccessMessage(
         "Quest complete. Your character has progressed."
       );
@@ -352,15 +364,20 @@ function Tasks() {
       setError("");
       setSuccessMessage("");
 
-      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
-        method: "DELETE",
-        headers: authHeaders,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/tasks/${taskId}`,
+        {
+          method: "DELETE",
+          headers: authHeaders,
+        }
+      );
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Unable to delete quest");
+        throw new Error(
+          result.message || "Unable to delete quest"
+        );
       }
 
       setTasks((previous) =>
@@ -385,7 +402,9 @@ function Tasks() {
 
   const completionPercentage =
     tasks.length > 0
-      ? Math.round((completedTasks.length / tasks.length) * 100)
+      ? Math.round(
+          (completedTasks.length / tasks.length) * 100
+        )
       : 0;
 
   return (
@@ -503,7 +522,10 @@ function Tasks() {
               </div>
 
               {loadingTasks ? (
-                <div className="space-y-4" aria-label="Loading quests">
+                <div
+                  className="space-y-4"
+                  aria-label="Loading quests"
+                >
                   {[1, 2, 3].map((item) => (
                     <div
                       key={item}
@@ -524,7 +546,9 @@ function Tasks() {
                           index={index}
                           completingId={completingId}
                           deletingId={deletingId}
-                          recentlyCompletedId={recentlyCompletedId}
+                          recentlyCompletedId={
+                            recentlyCompletedId
+                          }
                           onComplete={handleComplete}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
@@ -569,7 +593,9 @@ function Tasks() {
                             completed
                             completingId={completingId}
                             deletingId={deletingId}
-                            recentlyCompletedId={recentlyCompletedId}
+                            recentlyCompletedId={
+                              recentlyCompletedId
+                            }
                             onComplete={handleComplete}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
@@ -604,7 +630,10 @@ function Tasks() {
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form
+                  onSubmit={handleSubmit}
+                  className="space-y-5"
+                >
                   <div>
                     <label
                       htmlFor="task-title"
@@ -709,7 +738,10 @@ function Tasks() {
                   </div>
 
                   {formError && (
-                    <p className="text-sm text-red-300" role="alert">
+                    <p
+                      className="text-sm text-red-300"
+                      role="alert"
+                    >
                       {formError}
                     </p>
                   )}
@@ -876,7 +908,9 @@ function TaskCard({
           {task.description && (
             <p
               className={`mt-2 text-sm leading-6 ${
-                completed ? "text-neutral-700" : "text-neutral-500"
+                completed
+                  ? "text-neutral-700"
+                  : "text-neutral-500"
               }`}
             >
               {task.description}
@@ -905,7 +939,9 @@ function TaskCard({
             {completed && task.completedAt && (
               <span className="text-neutral-700">
                 Completed{" "}
-                {new Date(task.completedAt).toLocaleDateString()}
+                {new Date(
+                  task.completedAt
+                ).toLocaleDateString()}
               </span>
             )}
           </div>

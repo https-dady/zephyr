@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-
-const API_BASE_URL = "http://localhost:5000/api";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   {
@@ -24,82 +22,17 @@ const NAV_ITEMS = [
 
 function Navbar() {
   const location = useLocation();
-  const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  const token = localStorage.getItem("token");
-
-  const authHeaders = useMemo(
-    () => ({
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    }),
-    [token]
-  );
-
-  useEffect(() => {
-    if (!token) {
-      setLoadingUser(false);
-      return;
-    }
-
-    fetchCurrentUser();
-  }, [token]);
-
-  const fetchCurrentUser = async () => {
-    try {
-      setLoadingUser(true);
-
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: "GET",
-        headers: authHeaders,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Unable to load user");
-      }
-
-      setUser(result.data.user);
-    } catch (error) {
-      console.error("Navbar user error:", error);
-
-      if (
-        error.message === "Token expired" ||
-        error.message === "Invalid token"
-      ) {
-        localStorage.removeItem("token");
-        navigate("/login");
-      }
-    } finally {
-      setLoadingUser(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        headers: authHeaders,
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      localStorage.removeItem("token");
-      navigate("/login");
-    }
-  };
+  const { user, loading, logout } = useAuth();
 
   const userInitial =
     user?.name?.trim()?.charAt(0)?.toUpperCase() || "A";
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-neutral-950/90 backdrop-blur-xl">
@@ -152,7 +85,7 @@ function Navbar() {
 
         {/* RIGHT — Logged-in User */}
         <div className="flex justify-end">
-          {loadingUser ? (
+          {loading ? (
             <div className="h-10 w-24 animate-pulse rounded-xl bg-white/5 sm:w-32" />
           ) : (
             <div className="flex items-center gap-2 sm:gap-3">
@@ -179,10 +112,10 @@ function Navbar() {
               <button
                 type="button"
                 onClick={handleLogout}
-                disabled={loggingOut}
+                disabled={loading}
                 className="hidden rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-amber-300/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 lg:block"
               >
-                {loggingOut ? "..." : "Logout"}
+                Logout
               </button>
             </div>
           )}
@@ -217,10 +150,10 @@ function Navbar() {
           <button
             type="button"
             onClick={handleLogout}
-            disabled={loggingOut}
+            disabled={loading}
             className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-500 transition hover:text-white disabled:opacity-50"
           >
-            {loggingOut ? "..." : "Logout"}
+            Logout
           </button>
         </nav>
       </div>
