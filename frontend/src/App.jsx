@@ -1,4 +1,9 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
 import Home from "./pages/Home";
@@ -14,95 +19,203 @@ import Profile from "./pages/Profile";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
-const PAGE_TRANSITION = {
-  initial: {
-    opacity: 0,
-    y: 8,
+const SEO_CONFIG = {
+  "/": {
+    title: "Life RPG — Turn Everyday Life Into Your Next Level",
+    description:
+      "Life RPG turns everyday tasks into quests, XP, character progression, streaks, and rewards.",
+    robots: "index, follow",
   },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.22,
-      ease: [0.22, 1, 0.36, 1],
-    },
+
+  "/login": {
+    title: "Login — Life RPG",
+    description:
+      "Log in to your Life RPG account and continue your quests, progression, streaks, and character journey.",
+    robots: "noindex, nofollow",
   },
-  exit: {
-    opacity: 0,
-    y: -4,
-    transition: {
-      duration: 0.14,
-      ease: "easeIn",
-    },
+
+  "/signup": {
+    title: "Create Your Character — Life RPG",
+    description:
+      "Create your Life RPG account and turn everyday tasks into quests, XP, progression, streaks, and rewards.",
+    robots: "noindex, nofollow",
+  },
+
+  "/forgot-password": {
+    title: "Recover Your Account — Life RPG",
+    description:
+      "Securely recover your Life RPG account and return to your quests and character progression.",
+    robots: "noindex, nofollow",
+  },
+
+  "/verify-email": {
+    title: "Verify Your Email — Life RPG",
+    description:
+      "Verify your Life RPG account email to continue your journey.",
+    robots: "noindex, nofollow",
+  },
+
+  "/dashboard": {
+    title: "Dashboard — Life RPG",
+    description:
+      "View your Life RPG progression, quests, XP, attributes, streaks, and global leaderboard.",
+    robots: "noindex, nofollow",
+  },
+
+  "/tasks": {
+    title: "Quests — Life RPG",
+    description:
+      "Manage your Life RPG quests, complete tasks, earn XP, and build your character.",
+    robots: "noindex, nofollow",
+  },
+
+  "/rewards": {
+    title: "Rewards — Life RPG",
+    description:
+      "Explore Life RPG rewards and use your earned currency to unlock virtual items, themes, and badges.",
+    robots: "noindex, nofollow",
+  },
+
+  "/profile": {
+    title: "Profile — Life RPG",
+    description:
+      "View your Life RPG character, progression, attributes, streaks, and earned rewards.",
+    robots: "noindex, nofollow",
   },
 };
+
+function updateMetaTag(name, content) {
+  let element = document.head.querySelector(
+    `meta[name="${name}"]`
+  );
+
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute("name", name);
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute("content", content);
+}
+
+function updateCanonical(pathname) {
+  let canonical = document.head.querySelector(
+    'link[rel="canonical"]'
+  );
+
+  if (!canonical) {
+    canonical = document.createElement("link");
+    canonical.setAttribute("rel", "canonical");
+    document.head.appendChild(canonical);
+  }
+
+  const origin = window.location.origin;
+
+  canonical.setAttribute(
+    "href",
+    `${origin}${pathname === "/" ? "/" : pathname}`
+  );
+}
+
+function PageSEO() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const config =
+      SEO_CONFIG[location.pathname] ||
+      SEO_CONFIG["/"];
+
+    document.title = config.title;
+
+    updateMetaTag(
+      "description",
+      config.description
+    );
+
+    updateMetaTag(
+      "robots",
+      config.robots
+    );
+
+    updateCanonical(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+}
 
 function App() {
   const location = useLocation();
 
   return (
-    <AnimatePresence
-      mode="wait"
-      initial={false}
-    >
-      <motion.div
-        key={location.pathname}
-        variants={PAGE_TRANSITION}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        className="min-h-screen"
+    <>
+      <PageSEO />
+
+      <AnimatePresence
+        mode="sync"
+        initial={false}
       >
-        <Routes location={location}>
-          <Route
-            path="/"
-            element={<Home />}
-          />
-
-          <Route
-            path="/login"
-            element={<Login />}
-          />
-
-          <Route
-            path="/signup"
-            element={<Signup />}
-          />
-
-          <Route
-            path="/forgot-password"
-            element={<ForgotPassword />}
-          />
-
-          <Route
-            path="/verify-email"
-            element={<VerifyEmail />}
-          />
-
-          <Route element={<ProtectedRoute />}>
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{
+            duration: 0.18,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          className="min-h-screen"
+        >
+          <Routes location={location}>
             <Route
-              path="/dashboard"
-              element={<Dashboard />}
+              path="/"
+              element={<Home />}
             />
 
             <Route
-              path="/tasks"
-              element={<Tasks />}
+              path="/login"
+              element={<Login />}
             />
 
             <Route
-              path="/rewards"
-              element={<Rewards />}
+              path="/signup"
+              element={<Signup />}
             />
 
             <Route
-              path="/profile"
-              element={<Profile />}
+              path="/forgot-password"
+              element={<ForgotPassword />}
             />
-          </Route>
-        </Routes>
-      </motion.div>
-    </AnimatePresence>
+
+            <Route
+              path="/verify-email"
+              element={<VerifyEmail />}
+            />
+
+            <Route element={<ProtectedRoute />}>
+              <Route
+                path="/dashboard"
+                element={<Dashboard />}
+              />
+
+              <Route
+                path="/tasks"
+                element={<Tasks />}
+              />
+
+              <Route
+                path="/rewards"
+                element={<Rewards />}
+              />
+
+              <Route
+                path="/profile"
+                element={<Profile />}
+              />
+            </Route>
+          </Routes>
+        </motion.div>
+      </AnimatePresence>
+    </>
   );
 }
 

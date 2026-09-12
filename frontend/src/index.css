@@ -68,7 +68,23 @@ body {
    ACCESSIBLE FOCUS
    ========================================================= */
 
-:focus-visible {
+ :focus-visible {
+  outline: 2px solid rgba(252, 211, 77, 0.9);
+  outline-offset: 3px;
+}
+
+/* Keep mouse/touch focus quiet while preserving keyboard focus. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure keyboard focus remains visible on common controls even when
+   component-level styles override the browser's native outline. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid rgba(252, 211, 77, 0.9);
   outline-offset: 3px;
 }
