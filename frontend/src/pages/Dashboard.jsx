@@ -6,6 +6,38 @@ import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
+const DASHBOARD_EASE = [0.22, 1, 0.36, 1];
+
+const dashboardReveal = {
+  hidden: {
+    opacity: 0,
+    y: 42,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.72,
+      ease: DASHBOARD_EASE,
+    },
+  },
+};
+
+const dashboardRevealFast = {
+  hidden: {
+    opacity: 0,
+    y: 28,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.58,
+      ease: DASHBOARD_EASE,
+    },
+  },
+};
+
 const LEADERBOARD_METRICS = [
   { value: "xp", label: "XP" },
   { value: "level", label: "Level" },
@@ -352,7 +384,12 @@ function Dashboard() {
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           {/* PAGE INTRO */}
-          <section className="mb-8">
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={dashboardRevealFast}
+            className="mb-8"
+          >
             <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-amber-300/80">
               Adventurer Dashboard
             </p>
@@ -381,11 +418,17 @@ function Dashboard() {
                 <span className="ml-2">→</span>
               </Link>
             </div>
-          </section>
+          </motion.section>
 
           {/* CHARACTER PROGRESSION */}
           {authLoading && (
-            <section className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8">
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              variants={dashboardReveal}
+              className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-6 sm:p-8"
+            >
               <div className="animate-pulse space-y-5">
                 <div className="h-4 w-40 rounded bg-white/10" />
 
@@ -399,11 +442,17 @@ function Dashboard() {
                   <div className="h-20 rounded-2xl bg-white/5" />
                 </div>
               </div>
-            </section>
+            </motion.section>
           )}
 
           {tasksError && !loadingTasks && (
-            <section className="mb-8 rounded-2xl border border-red-400/20 bg-red-400/5 p-5">
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              variants={dashboardReveal}
+              className="mb-8 rounded-2xl border border-red-400/20 bg-red-400/5 p-5"
+            >
               <p className="text-sm text-red-300">
                 {tasksError}
               </p>
@@ -415,7 +464,7 @@ function Dashboard() {
               >
                 Try again →
               </button>
-            </section>
+            </motion.section>
           )}
 
           {!authLoading && user && (
@@ -571,7 +620,13 @@ function Dashboard() {
 
           {/* QUICK CHARACTER STATS */}
           {!authLoading && user && (
-            <section className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.12 }}
+              variants={dashboardReveal}
+              className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4"
+            >
               <StatCard
                 label="Currency"
                 value={user.currency || 0}
@@ -599,11 +654,17 @@ function Dashboard() {
                 suffix={`/${totalTasks} done`}
                 icon="✓"
               />
-            </section>
+            </motion.section>
           )}
 
           {/* ATTRIBUTES */}
-          <section className="mb-8">
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
             <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
@@ -782,10 +843,16 @@ function Dashboard() {
                 }
               )}
             </div>
-          </section>
+          </motion.section>
 
           {/* STREAK */}
-          <section className="mb-8">
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
             <div className="mb-5">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
                 Consistency
@@ -1062,10 +1129,16 @@ function Dashboard() {
                 </div>
               </motion.article>
             </div>
-          </section>
+          </motion.section>
 
           {/* QUEST PROGRESS */}
-          <section className="mb-8">
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
             <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
@@ -1160,10 +1233,16 @@ function Dashboard() {
                 </div>
               </div>
             </motion.article>
-          </section>
+          </motion.section>
 
           {/* LEADERBOARD */}
-          <section className="mb-8">
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="mb-8"
+          >
             <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
@@ -1337,10 +1416,16 @@ function Dashboard() {
                   </div>
                 </div>
               )}
-          </section>
+          </motion.section>
 
           {/* FINAL CTA */}
-          <section className="rounded-3xl border border-amber-300/10 bg-gradient-to-br from-amber-300/[0.08] to-transparent p-6 sm:p-8">
+          <motion.section
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.12 }}
+            variants={dashboardReveal}
+            className="rounded-3xl border border-amber-300/10 bg-gradient-to-br from-amber-300/[0.08] to-transparent p-6 sm:p-8"
+          >
             <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-300/70">
@@ -1363,7 +1448,7 @@ function Dashboard() {
                 Continue Your Journey →
               </Link>
             </div>
-          </section>
+          </motion.section>
         </div>
       </div>
     </main>
@@ -1376,7 +1461,11 @@ function ProgressInfo({
   description,
 }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-black/20 p-4">
+    <motion.div
+      whileHover={{ y: -3 }}
+      transition={{ duration: 0.22, ease: DASHBOARD_EASE }}
+      className="rounded-2xl border border-white/5 bg-black/20 p-4 transition-[border-color,background-color] duration-300 hover:border-white/10 hover:bg-black/25"
+    >
       <p className="text-xs uppercase tracking-wider text-neutral-600">
         {label}
       </p>
@@ -1388,7 +1477,7 @@ function ProgressInfo({
       <p className="mt-1 text-xs text-neutral-600">
         {description}
       </p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -1408,7 +1497,9 @@ function StatCard({
         opacity: 1,
         y: 0,
       }}
-      className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-amber-300/20 hover:bg-white/[0.045]"
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25, ease: DASHBOARD_EASE }}
+      className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition-[border-color,background-color,box-shadow] duration-300 hover:border-amber-300/20 hover:bg-white/[0.045] hover:shadow-lg hover:shadow-black/10"
     >
       <div className="flex items-center justify-between">
         <p className="text-xs uppercase tracking-wider text-neutral-500">

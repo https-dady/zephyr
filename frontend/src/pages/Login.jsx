@@ -173,7 +173,10 @@ function Login() {
                     transition={{
                       duration: 0.45,
                       delay: 0.25 + index * 0.1,
-                    }}
+                     type: "spring", stiffness: 300, damping: 22
+                    }
+                  }
+                    whileHover={{ y: -3, x: 2 }}
                     className="flex gap-4 rounded-2xl border border-white/7 bg-white/[0.025] p-4"
                   >
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/10 bg-amber-300/5 text-sm text-amber-300">
@@ -204,6 +207,7 @@ function Login() {
               delay: 0.1,
               ease: "easeOut",
             }}
+            whileHover={{ y: -3 }}
             className="mx-auto w-full max-w-md"
           >
             <div className="relative">
@@ -221,9 +225,12 @@ function Login() {
 
                 {/* Header */}
                 <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-lg text-amber-300 shadow-[0_0_30px_rgba(252,211,77,0.07)]">
+                  <motion.div
+                    whileHover={{ scale: 1.06, rotate: 3 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 18 }}
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-lg text-amber-300 shadow-[0_0_30px_rgba(252,211,77,0.07)]">
                     ✦
-                  </div>
+                  </motion.div>
 
                   <h2 className="mt-6 text-2xl font-semibold tracking-tight">
                     Welcome back

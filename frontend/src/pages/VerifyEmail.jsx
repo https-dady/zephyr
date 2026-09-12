@@ -15,6 +15,20 @@ const API_BASE_URL = "http://localhost:5000/api";
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESEND_COOLDOWN_STORAGE_KEY = "verification_resend_available_at";
 
+const AUTH_EASE = [0.22, 1, 0.36, 1];
+
+const SPRING = {
+  type: "spring",
+  stiffness: 320,
+  damping: 22,
+};
+
+const BUTTON_SPRING = {
+  type: "spring",
+  stiffness: 420,
+  damping: 24,
+};
+
 function VerifyEmail() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -294,18 +308,41 @@ function VerifyEmail() {
 
       {/* Top navigation */}
       <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between">
-        <Link
-          to="/signup"
-          className="rpg-interactive inline-flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950/70 px-4 py-2.5 text-sm font-medium text-neutral-300 backdrop-blur-xl hover:border-neutral-700 hover:text-white"
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35, ease: AUTH_EASE }}
         >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Signup
-        </Link>
+          <Link
+            to="/signup"
+            className="rpg-interactive inline-flex items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-950/70 px-4 py-2.5 text-sm font-medium text-neutral-300 backdrop-blur-xl hover:border-neutral-700 hover:text-white"
+          >
+            <motion.span
+              whileHover={{ x: -3 }}
+              transition={BUTTON_SPRING}
+              className="inline-flex"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </motion.span>
+            Back to Signup
+          </Link>
+        </motion.div>
 
-        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-neutral-500">
-          <ShieldCheck className="h-4 w-4 text-amber-300" />
+        <motion.div
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.35, delay: 0.05, ease: AUTH_EASE }}
+          className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-neutral-500"
+        >
+          <motion.span
+            animate={{ opacity: [0.55, 1, 0.55] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="inline-flex"
+          >
+            <ShieldCheck className="h-4 w-4 text-amber-300" />
+          </motion.span>
           Secure Verification
-        </div>
+        </motion.div>
       </div>
 
       {/* Main */}
@@ -315,17 +352,25 @@ function VerifyEmail() {
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: 0.45,
-            ease: [0.22, 1, 0.36, 1],
+            ease: AUTH_EASE,
           }}
           className="w-full max-w-md"
         >
           {/* Card */}
-          <div className="rpg-card rounded-3xl border border-neutral-800/90 bg-neutral-950/85 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-8">
+          <motion.div
+            whileHover={{ y: -4 }}
+            transition={SPRING}
+            className="rpg-card rounded-3xl border border-neutral-800/90 bg-neutral-950/85 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-8">
             {/* Icon */}
             <div className="flex justify-center">
-              <div className="rpg-glow flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/[0.07]">
+              <motion.div
+                whileHover={{ scale: 1.06, rotate: 4 }}
+                whileTap={{ scale: 0.96 }}
+                transition={SPRING}
+                className="rpg-glow flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/[0.07]"
+              >
                 <Mail className="h-7 w-7 text-amber-300" />
-              </div>
+              </motion.div>
             </div>
 
             {/* Heading */}
@@ -362,7 +407,9 @@ function VerifyEmail() {
               <div className="relative">
                 <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-500" />
 
-                <input
+                <motion.input
+                  whileFocus={{ scale: 1.01 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
                   id="otp"
                   name="otp"
                   type="text"
@@ -411,13 +458,17 @@ function VerifyEmail() {
               )}
 
               {/* Verify */}
-              <button
-                type="submit"
-                disabled={
-                  isVerifying || isResending
-                }
-                className="rpg-button mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-amber-300 px-5 text-sm font-semibold text-neutral-950 shadow-lg shadow-amber-300/10 transition-all hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+              <motion.div
+                whileHover={{ y: -2 }}
+                transition={BUTTON_SPRING}
               >
+                <button
+                  type="submit"
+                  disabled={
+                    isVerifying || isResending
+                  }
+                  className="rpg-button mt-5 flex h-14 w-full items-center justify-center rounded-xl bg-amber-300 px-5 text-sm font-semibold text-neutral-950 shadow-lg shadow-amber-300/10 transition-all hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
                 {isVerifying ? (
                   <span className="flex items-center gap-2">
                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -426,7 +477,8 @@ function VerifyEmail() {
                 ) : (
                   "Verify Email"
                 )}
-              </button>
+                </button>
+              </motion.div>
             </form>
 
             {/* Resend */}
@@ -435,15 +487,21 @@ function VerifyEmail() {
                 Didn't receive the code?
               </p>
 
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={
-                  resendCooldown > 0 ||
-                  isVerifying ||
-                  isResending
-                }
-                className={`mt-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              <motion.div
+                whileHover={resendCooldown > 0 ? undefined : { y: -1 }}
+                whileTap={resendCooldown > 0 ? undefined : { scale: 0.97 }}
+                transition={BUTTON_SPRING}
+                className="inline-flex"
+              >
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={
+                    resendCooldown > 0 ||
+                    isVerifying ||
+                    isResending
+                  }
+                  className={`mt-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   resendCooldown > 0
                     ? "cursor-not-allowed text-neutral-600"
                     : "text-amber-300 hover:bg-amber-300/[0.06] hover:text-amber-200"
@@ -462,7 +520,8 @@ function VerifyEmail() {
                   : resendCooldown > 0
                   ? `Resend available in ${resendCooldown}s`
                   : "Resend verification code"}
-              </button>
+                </button>
+              </motion.div>
             </div>
 
             {/* Login */}
@@ -471,14 +530,20 @@ function VerifyEmail() {
                 Already verified?
               </p>
 
-              <Link
-                to="/login"
-                className="mt-2 inline-block text-sm font-semibold text-neutral-200 transition-colors hover:text-amber-300"
+              <motion.div
+                whileHover={{ y: -1 }}
+                transition={BUTTON_SPRING}
+                className="inline-block"
               >
-                Go to Login
-              </Link>
+                <Link
+                  to="/login"
+                  className="mt-2 inline-block text-sm font-semibold text-neutral-200 transition-colors hover:text-amber-300"
+                >
+                  Go to Login
+                </Link>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Footer hint */}
           <p className="mt-5 text-center text-xs leading-5 text-neutral-600">

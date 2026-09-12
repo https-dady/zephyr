@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
 import RPGFeedback from "../components/RPGFeedback";
 import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "http://localhost:5000/api";
+
+const TASKS_EASE = [0.22, 1, 0.36, 1];
+
+const tasksReveal = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: TASKS_EASE },
+  },
+};
 
 const TASK_CATEGORIES = [
   { value: "coding", label: "Coding", attribute: "Intellect" },
@@ -24,12 +35,7 @@ const EMPTY_FORM = {
 
 function Tasks() {
   const navigate = useNavigate();
-
-  const {
-    token,
-    loading: authLoading,
-    refreshUser,
-  } = useAuth();
+  const { token, loading: authLoading, refreshUser } = useAuth();
 
   const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -70,9 +76,7 @@ function Tasks() {
 
   useEffect(() => {
     return () => {
-      feedbackTimersRef.current.forEach((timer) =>
-        clearTimeout(timer)
-      );
+      feedbackTimersRef.current.forEach((timer) => clearTimeout(timer));
     };
   }, []);
 
@@ -100,7 +104,7 @@ function Tasks() {
         err.message === "Token expired" ||
         err.message === "Invalid token"
       ) {
-        navigate("/login", { replace: true });
+        await refreshUser();
         return;
       }
 
@@ -108,6 +112,15 @@ function Tasks() {
     } finally {
       setLoadingTasks(false);
     }
+  };
+
+  const handleAuthError = async (message) => {
+    if (message === "Token expired" || message === "Invalid token") {
+      await refreshUser();
+      return true;
+    }
+
+    return false;
   };
 
   const handleInputChange = (event) => {
@@ -187,6 +200,11 @@ function Tasks() {
       setEditingTask(null);
     } catch (err) {
       console.error("Save task error:", err);
+
+      if (await handleAuthError(err.message)) {
+        return;
+      }
+
       setFormError(err.message || "Unable to save quest.");
     } finally {
       setSubmitting(false);
@@ -237,9 +255,7 @@ function Tasks() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to complete quest"
-        );
+        throw new Error(result.message || "Unable to complete quest");
       }
 
       const completedTask = result.data.task;
@@ -339,13 +355,18 @@ function Tasks() {
         }, 800)
       );
 
-      await refreshUser();
-
       setSuccessMessage(
         "Quest complete. Your character has progressed."
       );
+
+      refreshUser();
     } catch (err) {
       console.error("Complete task error:", err);
+
+      if (await handleAuthError(err.message)) {
+        return;
+      }
+
       setError(err.message || "Unable to complete quest.");
     } finally {
       setCompletingId(null);
@@ -364,20 +385,15 @@ function Tasks() {
       setError("");
       setSuccessMessage("");
 
-      const response = await fetch(
-        `${API_BASE_URL}/tasks/${taskId}`,
-        {
-          method: "DELETE",
-          headers: authHeaders,
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to delete quest"
-        );
+        throw new Error(result.message || "Unable to delete quest");
       }
 
       setTasks((previous) =>
@@ -391,6 +407,11 @@ function Tasks() {
       setSuccessMessage("Quest removed from your journey.");
     } catch (err) {
       console.error("Delete task error:", err);
+
+      if (await handleAuthError(err.message)) {
+        return;
+      }
+
       setError(err.message || "Unable to delete quest.");
     } finally {
       setDeletingId(null);
@@ -402,9 +423,7 @@ function Tasks() {
 
   const completionPercentage =
     tasks.length > 0
-      ? Math.round(
-          (completedTasks.length / tasks.length) * 100
-        )
+      ? Math.round((completedTasks.length / tasks.length) * 100)
       : 0;
 
   return (
@@ -425,7 +444,12 @@ function Tasks() {
         />
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-          <section className="mb-8">
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={tasksReveal}
+            className="mb-8"
+          >
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-amber-300/70">
               Quest Board
             </p>
@@ -461,7 +485,7 @@ function Tasks() {
                 </div>
               </div>
             </div>
-          </section>
+          </motion.section>
 
           <AnimatePresence>
             {successMessage && (
@@ -508,7 +532,12 @@ function Tasks() {
           </AnimatePresence>
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <section>
+            <motion.section
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.08 }}
+              variants={tasksReveal}
+            >
               <div className="mb-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-amber-300/60">
                   Your journey
@@ -522,10 +551,7 @@ function Tasks() {
               </div>
 
               {loadingTasks ? (
-                <div
-                  className="space-y-4"
-                  aria-label="Loading quests"
-                >
+                <div className="space-y-4" aria-label="Loading quests">
                   {[1, 2, 3].map((item) => (
                     <div
                       key={item}
@@ -546,9 +572,7 @@ function Tasks() {
                           index={index}
                           completingId={completingId}
                           deletingId={deletingId}
-                          recentlyCompletedId={
-                            recentlyCompletedId
-                          }
+                          recentlyCompletedId={recentlyCompletedId}
                           onComplete={handleComplete}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
@@ -593,9 +617,7 @@ function Tasks() {
                             completed
                             completingId={completingId}
                             deletingId={deletingId}
-                            recentlyCompletedId={
-                              recentlyCompletedId
-                            }
+                            recentlyCompletedId={recentlyCompletedId}
                             onComplete={handleComplete}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
@@ -606,12 +628,14 @@ function Tasks() {
                   )}
                 </>
               )}
-            </section>
+            </motion.section>
 
             <aside className="lg:sticky lg:top-24 lg:self-start">
               <motion.section
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, x: 18 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.08 }}
+                transition={{ duration: 0.5, ease: TASKS_EASE }}
                 className="rounded-3xl border border-white/10 bg-white/[0.04] p-6"
               >
                 <div className="mb-6">
@@ -630,10 +654,7 @@ function Tasks() {
                   </p>
                 </div>
 
-                <form
-                  onSubmit={handleSubmit}
-                  className="space-y-5"
-                >
+                <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
                     <label
                       htmlFor="task-title"
@@ -738,10 +759,7 @@ function Tasks() {
                   </div>
 
                   {formError && (
-                    <p
-                      className="text-sm text-red-300"
-                      role="alert"
-                    >
+                    <p className="text-sm text-red-300" role="alert">
                       {formError}
                     </p>
                   )}
@@ -844,7 +862,13 @@ function TaskCard({
       transition={{
         duration: 0.3,
         delay: Math.min(index * 0.04, 0.2),
+        ease: TASKS_EASE,
       }}
+      whileHover={{
+        y: completed ? -2 : -4,
+        transition: { duration: 0.18, ease: "easeOut" },
+      }}
+      whileTap={{ y: completed ? 0 : -1 }}
       className={`group rounded-2xl border p-5 transition ${
         completed
           ? "border-white/5 bg-white/[0.02]"
@@ -857,10 +881,12 @@ function TaskCard({
     >
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
         <div className="shrink-0">
-          <button
+          <motion.button
             type="button"
             disabled={completed || isCompleting}
             onClick={() => onComplete(task)}
+            whileHover={!completed && !isCompleting ? { scale: 1.05 } : undefined}
+            whileTap={!completed && !isCompleting ? { scale: 0.94 } : undefined}
             aria-label={
               completed
                 ? `Completed: ${task.title}`
@@ -883,7 +909,7 @@ function TaskCard({
             ) : (
               "○"
             )}
-          </button>
+          </motion.button>
         </div>
 
         <div className="min-w-0 flex-1">
@@ -908,9 +934,7 @@ function TaskCard({
           {task.description && (
             <p
               className={`mt-2 text-sm leading-6 ${
-                completed
-                  ? "text-neutral-700"
-                  : "text-neutral-500"
+                completed ? "text-neutral-700" : "text-neutral-500"
               }`}
             >
               {task.description}
@@ -939,32 +963,34 @@ function TaskCard({
             {completed && task.completedAt && (
               <span className="text-neutral-700">
                 Completed{" "}
-                {new Date(
-                  task.completedAt
-                ).toLocaleDateString()}
+                {new Date(task.completedAt).toLocaleDateString()}
               </span>
             )}
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
-          <button
+          <motion.button
             type="button"
             onClick={() => onEdit(task)}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.96 }}
             disabled={isDeleting}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-amber-300/20 hover:text-amber-200 disabled:opacity-50"
           >
             Edit
-          </button>
+          </motion.button>
 
-          <button
+          <motion.button
             type="button"
             onClick={() => onDelete(task._id)}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.96 }}
             disabled={isDeleting}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-neutral-400 transition hover:border-red-300/20 hover:text-red-300 disabled:opacity-50"
           >
             {isDeleting ? "..." : "Delete"}
-          </button>
+          </motion.button>
         </div>
       </div>
     </motion.article>
@@ -973,7 +999,11 @@ function TaskCard({
 
 function EmptyQuests() {
   return (
-    <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: TASKS_EASE }}
+      className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/15 bg-amber-300/5 text-2xl text-amber-300">
         ✦
       </div>
@@ -990,7 +1020,7 @@ function EmptyQuests() {
       <p className="mt-5 text-xs uppercase tracking-wider text-neutral-700">
         Create a quest using the panel →
       </p>
-    </div>
+    </motion.div>
   );
 }
 

@@ -14,29 +14,60 @@ import Profile from "./pages/Profile";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
+const PAGE_TRANSITION = {
+  initial: {
+    opacity: 0,
+    y: 8,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.22,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -4,
+    transition: {
+      duration: 0.14,
+      ease: "easeIn",
+    },
+  },
+};
+
 function App() {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="sync" initial={false}>
+    <AnimatePresence
+      mode="wait"
+      initial={false}
+    >
       <motion.div
         key={location.pathname}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{
-          duration: 0.18,
-          ease: [0.22, 1, 0.36, 1],
-        }}
+        variants={PAGE_TRANSITION}
+        initial="initial"
+        animate="animate"
+        exit="exit"
         className="min-h-screen"
       >
         <Routes location={location}>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={<Home />}
+          />
 
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={<Login />}
+          />
 
-          <Route path="/signup" element={<Signup />} />
+          <Route
+            path="/signup"
+            element={<Signup />}
+          />
 
           <Route
             path="/forgot-password"
@@ -48,7 +79,6 @@ function App() {
             element={<VerifyEmail />}
           />
 
-          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route
               path="/dashboard"

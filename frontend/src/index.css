@@ -222,6 +222,7 @@ body {
 
 .rpg-button {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   transform: translateZ(0);
   transition:
@@ -231,6 +232,22 @@ body {
     border-color 180ms ease,
     opacity 180ms ease;
   will-change: transform;
+}
+
+.rpg-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at 50% 100%,
+    rgba(252, 211, 77, 0.08),
+    transparent 58%
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+  z-index: -1;
 }
 
 .rpg-button::after {
@@ -253,6 +270,10 @@ body {
     transform: translateY(-2px) translateZ(0);
   }
 
+  .rpg-button:hover::before {
+    opacity: 1;
+  }
+
   .rpg-button:hover::after {
     transform: translateX(120%);
   }
@@ -260,10 +281,92 @@ body {
 
 .rpg-button:active {
   transform: translateY(0) scale(0.97) translateZ(0);
+  transition-duration: 90ms;
+}
+
+.rpg-button:focus-visible {
+  box-shadow:
+    0 0 0 2px #0a0a0a,
+    0 0 0 4px rgba(252, 211, 77, 0.8);
 }
 
 .rpg-button:disabled {
   transform: none;
+  box-shadow: none;
+}
+
+.rpg-button:disabled::before,
+.rpg-button:disabled::after {
+  display: none;
+}
+
+/* =========================================================
+   GENERIC INTERACTIVE LINK
+   ========================================================= */
+
+.rpg-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  transform: translateZ(0);
+  transition:
+    color 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+
+@media (hover: hover) {
+  .rpg-link:hover {
+    transform: translateX(2px) translateZ(0);
+  }
+}
+
+.rpg-link:active {
+  transform: translateX(1px) scale(0.985) translateZ(0);
+}
+
+.rpg-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: currentColor;
+  transition: transform 180ms ease;
+  opacity: 0.45;
+}
+
+@media (hover: hover) {
+  .rpg-link:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+/* =========================================================
+   INTERACTIVE ICON
+   ========================================================= */
+
+.rpg-icon-interactive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(0);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+
+@media (hover: hover) {
+  .rpg-icon-interactive:hover {
+    transform: scale(1.08) translateZ(0);
+  }
+}
+
+.rpg-icon-interactive:active {
+  transform: scale(0.94) translateZ(0);
 }
 
 /* =========================================================
@@ -426,7 +529,16 @@ body {
 
   .rpg-interactive:hover,
   .rpg-card:hover,
-  .rpg-button:hover {
+  .rpg-button:hover,
+  .rpg-link:hover,
+  .rpg-icon-interactive:hover {
     transform: none;
+  }
+
+  .rpg-button::before,
+  .rpg-button::after,
+  .rpg-card::after,
+  .rpg-link::after {
+    display: none;
   }
 }

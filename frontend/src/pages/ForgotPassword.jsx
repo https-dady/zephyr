@@ -6,6 +6,20 @@ import Container from "../components/Container";
 
 const API_BASE_URL = "http://localhost:5000/api";
 
+const AUTH_EASE = [0.22, 1, 0.36, 1];
+
+const CARD_SPRING = {
+  type: "spring",
+  stiffness: 280,
+  damping: 22,
+};
+
+const BUTTON_SPRING = {
+  type: "spring",
+  stiffness: 420,
+  damping: 24,
+};
+
 function ForgotPassword() {
   const navigate = useNavigate();
 
@@ -406,6 +420,12 @@ function ForgotPassword() {
                     transition={{
                       duration: 0.45,
                       delay: 0.25 + index * 0.1,
+                      ease: AUTH_EASE,
+                    }}
+                    whileHover={{
+                      y: -3,
+                      x: 2,
+                      transition: CARD_SPRING,
                     }}
                     className="flex gap-4 rounded-2xl border border-white/7 bg-white/[0.025] p-4"
                   >
@@ -444,7 +464,11 @@ function ForgotPassword() {
             }}
             transition={{
               duration: 0.35,
-              ease: "easeOut",
+              ease: AUTH_EASE,
+            }}
+            whileHover={{
+              y: -2,
+              transition: CARD_SPRING,
             }}
             className="mx-auto w-full max-w-md"
           >
@@ -455,11 +479,19 @@ function ForgotPassword() {
                 {/* Header */}
 
                 <div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-lg text-amber-300 shadow-[0_0_30px_rgba(252,211,77,0.07)]">
+                  <motion.div
+                    whileHover={{
+                      scale: 1.08,
+                      rotate: 5,
+                      transition: CARD_SPRING,
+                    }}
+                    whileTap={{ scale: 0.96 }}
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 text-lg text-amber-300 shadow-[0_0_30px_rgba(252,211,77,0.07)]"
+                  >
                     {step === 1 && "↗"}
                     {step === 2 && "#"}
                     {step === 3 && "✦"}
-                  </div>
+                  </motion.div>
 
                   <h2 className="mt-6 text-2xl font-semibold tracking-tight">
                     {step === 1 && "Recover your account"}
@@ -490,8 +522,17 @@ function ForgotPassword() {
 
                       return (
                         <div key={label}>
-                          <div
-                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                          <motion.div
+                            initial={{ scaleX: 0.7, opacity: 0.6 }}
+                            animate={{
+                              scaleX: 1,
+                              opacity: 1,
+                            }}
+                            transition={{
+                              duration: 0.3,
+                              ease: AUTH_EASE,
+                            }}
+                            className={`h-1.5 origin-left rounded-full transition-all duration-300 ${
                               stepNumber <= step
                                 ? "bg-amber-300"
                                 : "bg-neutral-800"
@@ -572,7 +613,11 @@ function ForgotPassword() {
                         Account Email
                       </label>
 
-                      <input
+                      <motion.input
+                        whileFocus={{
+                          scale: 1.01,
+                          transition: CARD_SPRING,
+                        }}
                         id="forgot-email"
                         type="email"
                         autoComplete="email"
@@ -587,9 +632,17 @@ function ForgotPassword() {
                       />
                     </div>
 
-                    <button
+                    <motion.button
                       type="submit"
                       disabled={isLoading}
+                      whileHover={isLoading ? undefined : {
+                        y: -2,
+                        scale: 1.01,
+                        transition: BUTTON_SPRING,
+                      }}
+                      whileTap={isLoading ? undefined : {
+                        scale: 0.98,
+                      }}
                       className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-neutral-950 transition-all duration-200 hover:bg-amber-200 hover:shadow-[0_0_32px_rgba(252,211,77,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
@@ -606,7 +659,7 @@ function ForgotPassword() {
                           </span>
                         </>
                       )}
-                    </button>
+                    </motion.button>
                   </form>
                 )}
 
@@ -627,7 +680,11 @@ function ForgotPassword() {
                         Reset OTP
                       </label>
 
-                      <input
+                      <motion.input
+                        whileFocus={{
+                          scale: 1.01,
+                          transition: CARD_SPRING,
+                        }}
                         id="reset-otp"
                         type="text"
                         inputMode="numeric"
@@ -657,9 +714,17 @@ function ForgotPassword() {
                       </span>
                     </p>
 
-                    <button
+                    <motion.button
                       type="submit"
                       disabled={isLoading}
+                      whileHover={isLoading ? undefined : {
+                        y: -2,
+                        scale: 1.01,
+                        transition: BUTTON_SPRING,
+                      }}
+                      whileTap={isLoading ? undefined : {
+                        scale: 0.98,
+                      }}
                       className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-neutral-950 transition-all duration-200 hover:bg-amber-200 hover:shadow-[0_0_32px_rgba(252,211,77,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
@@ -676,7 +741,7 @@ function ForgotPassword() {
                           </span>
                         </>
                       )}
-                    </button>
+                    </motion.button>
 
                     {/* Resend OTP */}
 
@@ -685,9 +750,19 @@ function ForgotPassword() {
                         Didn't receive the code?
                       </span>
 
-                      <button
+                      <motion.button
                         type="button"
                         onClick={handleResendOtp}
+                        whileHover={
+                          isLoading || resendCooldown > 0
+                            ? undefined
+                            : { y: -1, transition: BUTTON_SPRING }
+                        }
+                        whileTap={
+                          isLoading || resendCooldown > 0
+                            ? undefined
+                            : { scale: 0.97 }
+                        }
                         disabled={
                           isLoading ||
                           resendCooldown > 0
@@ -697,7 +772,7 @@ function ForgotPassword() {
                         {resendCooldown > 0
                           ? `Resend in ${resendCooldown}s`
                           : "Resend OTP"}
-                      </button>
+                      </motion.button>
                     </div>
                   </form>
                 )}
@@ -719,7 +794,11 @@ function ForgotPassword() {
                         New Password
                       </label>
 
-                      <input
+                      <motion.input
+                        whileFocus={{
+                          scale: 1.01,
+                          transition: CARD_SPRING,
+                        }}
                         id="new-password"
                         name="password"
                         type="password"
@@ -741,7 +820,11 @@ function ForgotPassword() {
                         Confirm New Password
                       </label>
 
-                      <input
+                      <motion.input
+                        whileFocus={{
+                          scale: 1.01,
+                          transition: CARD_SPRING,
+                        }}
                         id="confirm-new-password"
                         name="confirmPassword"
                         type="password"
@@ -762,9 +845,17 @@ function ForgotPassword() {
                       long.
                     </p>
 
-                    <button
+                    <motion.button
                       type="submit"
                       disabled={isLoading}
+                      whileHover={isLoading ? undefined : {
+                        y: -2,
+                        scale: 1.01,
+                        transition: BUTTON_SPRING,
+                      }}
+                      whileTap={isLoading ? undefined : {
+                        scale: 0.98,
+                      }}
                       className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-300 px-5 py-3.5 text-sm font-semibold text-neutral-950 transition-all duration-200 hover:bg-amber-200 hover:shadow-[0_0_32px_rgba(252,211,77,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoading ? (
@@ -781,20 +872,22 @@ function ForgotPassword() {
                           </span>
                         </>
                       )}
-                    </button>
+                    </motion.button>
                   </form>
                 )}
 
                 {/* Back to Login */}
 
-                <button
+                <motion.button
                   type="button"
                   onClick={goBackToLogin}
+                  whileHover={{ y: -1, transition: BUTTON_SPRING }}
+                  whileTap={{ scale: 0.98 }}
                   className="mt-6 flex w-full items-center justify-center gap-2 text-xs text-neutral-600 transition-colors hover:text-amber-300"
                 >
                   <span>←</span>
                   Back to Login
-                </button>
+                </motion.button>
 
                 {/* Login link */}
 
@@ -802,7 +895,7 @@ function ForgotPassword() {
                   Remembered your password?{" "}
                   <Link
                     to="/login"
-                    className="text-amber-300/60 transition-colors hover:text-amber-300"
+                    className="rpg-link text-amber-300/60 transition-colors hover:text-amber-300"
                   >
                     Enter the Realm
                   </Link>
