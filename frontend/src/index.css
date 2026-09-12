@@ -1,1 +1,432 @@
 @import "tailwindcss";
+
+/* =========================================================
+   LIFE RPG — GLOBAL DESIGN + MOTION FOUNDATION
+   ========================================================= */
+
+:root {
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+  background: #0a0a0a;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #ffffff;
+  overflow-x: hidden;
+}
+
+/* =========================================================
+   SELECTION
+   ========================================================= */
+
+::selection {
+  background: rgba(252, 211, 77, 0.22);
+  color: #fefce8;
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 #0a0a0a;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #3f3f46;
+  border: 2px solid #0a0a0a;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* =========================================================
+   ACCESSIBLE FOCUS
+   ========================================================= */
+
+:focus-visible {
+  outline: 2px solid rgba(252, 211, 77, 0.9);
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   GLOBAL INTERACTIVE MOTION
+   ========================================================= */
+
+.rpg-interactive {
+  transform: translateZ(0);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease;
+  will-change: transform;
+}
+
+@media (hover: hover) {
+  .rpg-interactive:hover {
+    transform: translateY(-2px) translateZ(0);
+  }
+}
+
+.rpg-interactive:active {
+  transform: translateY(0) scale(0.985) translateZ(0);
+}
+
+/* =========================================================
+   PREMIUM CARD HOVER
+   ========================================================= */
+
+.rpg-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms ease,
+    box-shadow 260ms ease,
+    background-color 260ms ease;
+}
+
+.rpg-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(252, 211, 77, 0.08),
+      transparent 45%
+    );
+  transition: opacity 300ms ease;
+  z-index: -1;
+}
+
+@media (hover: hover) {
+  .rpg-card:hover {
+    transform: translateY(-3px) translateZ(0);
+  }
+
+  .rpg-card:hover::after {
+    opacity: 1;
+  }
+}
+
+/* =========================================================
+   SOFT RPG GLOW
+   ========================================================= */
+
+.rpg-glow {
+  position: relative;
+}
+
+.rpg-glow::before {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.07);
+  filter: blur(55px);
+  opacity: 0.7;
+  animation: rpgGlow 4s ease-in-out infinite;
+}
+
+/* =========================================================
+   FLOATING MICRO MOTION
+   ========================================================= */
+
+.rpg-float {
+  animation: rpgFloat 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* =========================================================
+   SOFT PULSE
+   ========================================================= */
+
+.rpg-pulse {
+  animation: rpgPulse 2.8s ease-in-out infinite;
+}
+
+/* =========================================================
+   SHIMMER
+   ========================================================= */
+
+.rpg-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.rpg-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.07) 45%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.07) 55%,
+    transparent 80%
+  );
+  animation: rpgShimmer 3.8s ease-in-out infinite;
+}
+
+/* =========================================================
+   XP / SUCCESS FEEDBACK
+   ========================================================= */
+
+.rpg-success-pop {
+  animation: rpgSuccessPop 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rpg-xp-pop {
+  animation: rpgXPFloat 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* =========================================================
+   BUTTON FOUNDATION
+   ========================================================= */
+
+.rpg-button {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    opacity 180ms ease;
+  will-change: transform;
+}
+
+.rpg-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.12) 48%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  transition: transform 500ms ease;
+}
+
+@media (hover: hover) {
+  .rpg-button:hover {
+    transform: translateY(-2px) translateZ(0);
+  }
+
+  .rpg-button:hover::after {
+    transform: translateX(120%);
+  }
+}
+
+.rpg-button:active {
+  transform: translateY(0) scale(0.97) translateZ(0);
+}
+
+.rpg-button:disabled {
+  transform: none;
+}
+
+/* =========================================================
+   LOADING SKELETON
+   ========================================================= */
+
+.rpg-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.rpg-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.045),
+    transparent
+  );
+  animation: rpgSkeleton 1.6s ease-in-out infinite;
+}
+
+/* =========================================================
+   PAGE ENTRY
+   ========================================================= */
+
+.rpg-page-enter {
+  animation: rpgPageEnter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* =========================================================
+   KEYFRAMES
+   ========================================================= */
+
+@keyframes rpgGlow {
+  0%,
+  100% {
+    transform: scale(0.95);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+@keyframes rpgFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes rpgPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes rpgShimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  45%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes rpgSuccessPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+
+  65% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes rpgXPFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-32px) scale(1.04);
+  }
+}
+
+@keyframes rpgSkeleton {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes rpgPageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .rpg-interactive:hover,
+  .rpg-card:hover,
+  .rpg-button:hover {
+    transform: none;
+  }
+}
