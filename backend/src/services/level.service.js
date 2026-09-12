@@ -5,14 +5,21 @@ const getLevelFromXP = (xp) => {
 
   let level = 1;
 
-  while (xp >= getXPRequiredForLevel(level + 1)) {
+  while (
+    xp >=
+    getXPRequiredForLevel(
+      level + 1
+    )
+  ) {
     level += 1;
   }
 
   return level;
 };
 
-const getXPRequiredForLevel = (level) => {
+const getXPRequiredForLevel = (
+  level
+) => {
   if (level <= 1) {
     return 0;
   }
@@ -20,12 +27,18 @@ const getXPRequiredForLevel = (level) => {
   return 50 * level * (level - 1);
 };
 
-const updateUserLevel = async (user) => {
-  const newLevel = getLevelFromXP(user.xp);
+const updateUserLevel = async (
+  user,
+  session = null
+) => {
+  const newLevel =
+    getLevelFromXP(user.xp);
 
   user.level = newLevel;
 
-  await user.save();
+  await user.save(
+    session ? { session } : undefined
+  );
 
   return {
     level: newLevel,

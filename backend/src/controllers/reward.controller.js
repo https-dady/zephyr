@@ -1,5 +1,11 @@
+const mongoose = require("mongoose");
+
 const Reward = require("../models/reward.model");
 const User = require("../models/user.model");
+
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
 
 const getRewards = async (req, res) => {
   try {
@@ -30,8 +36,17 @@ const getRewards = async (req, res) => {
 
 const purchaseReward = async (req, res) => {
   try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid reward ID",
+      });
+    }
+
     const reward = await Reward.findOne({
-      _id: req.params.id,
+      _id: id,
       isActive: true,
     });
 
@@ -42,33 +57,84 @@ const purchaseReward = async (req, res) => {
       });
     }
 
-    const user = await User.findById(
-      req.user.userId
-    );
+    const purchasedAt = new Date();
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    /*
+     * Atomic purchase condition:
+     *
+     * 1. User must exist.
+     * 2. User must have enough currency.
+     * 3. Reward must not already exist in inventory.
+     *
+     * All three conditions are checked by MongoDB
+     * as part of the same atomic update.
+     */
+    const updatedUser =
+      await User.findOneAndUpdate(
+        {
+          _id: req.user.userId,
 
-    const alreadyPurchased =
-      user.inventory.some(
-        (item) =>
-          item.reward.toString() ===
-          reward._id.toString()
+          currency: {
+            $gte: reward.cost,
+          },
+
+          inventory: {
+            $not: {
+              $elemMatch: {
+                reward: reward._id,
+              },
+            },
+          },
+        },
+        {
+          $inc: {
+            currency: -reward.cost,
+          },
+
+          $push: {
+            inventory: {
+              reward: reward._id,
+              purchasedAt,
+            },
+          },
+        },
+        {
+          new: true,
+          runValidators: true,
+        }
       );
 
-    if (alreadyPurchased) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Reward already purchased",
-      });
-    }
+    if (!updatedUser) {
+      const userExists =
+        await User.exists({
+          _id: req.user.userId,
+        });
 
-    if (user.currency < reward.cost) {
+      if (!userExists) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      const alreadyPurchased =
+        await User.exists({
+          _id: req.user.userId,
+          inventory: {
+            $elemMatch: {
+              reward: reward._id,
+            },
+          },
+        });
+
+      if (alreadyPurchased) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Reward already purchased",
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message:
@@ -76,24 +142,13 @@ const purchaseReward = async (req, res) => {
       });
     }
 
-    user.currency -= reward.cost;
-
-    user.inventory.push({
-      reward: reward._id,
-      purchasedAt: new Date(),
-    });
-
-    await user.save();
-
     return res.status(200).json({
       success: true,
       data: {
         reward,
-        currency: user.currency,
-        purchasedAt:
-          user.inventory[
-            user.inventory.length - 1
-          ].purchasedAt,
+        currency:
+          updatedUser.currency,
+        purchasedAt,
       },
     });
   } catch (error) {

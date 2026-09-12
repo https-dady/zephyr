@@ -34,9 +34,22 @@ const ATTRIBUTE_REWARDS = {
 
 const updateUserAttribute = async (
   userId,
-  category
+  category,
+  session = null
 ) => {
-  const user = await User.findById(userId);
+  if (typeof category !== "string") {
+    throw new Error(
+      "Task category must be a valid string"
+    );
+  }
+
+  const query = User.findById(userId);
+
+  if (session) {
+    query.session(session);
+  }
+
+  const user = await query;
 
   if (!user) {
     throw new Error("User not found");
@@ -46,25 +59,36 @@ const updateUserAttribute = async (
     category.trim().toLowerCase();
 
   const reward =
-    ATTRIBUTE_REWARDS[normalizedCategory];
+    ATTRIBUTE_REWARDS[
+      normalizedCategory
+    ];
 
   if (!reward) {
     return {
       attribute: null,
       amount: 0,
-      attributes: user.attributes,
+      attributes:
+        user.attributes,
     };
   }
 
-  user.attributes[reward.attribute] +=
-    reward.amount;
+  user.attributes[
+    reward.attribute
+  ] += reward.amount;
 
-  await user.save();
+  await user.save(
+    session ? { session } : undefined
+  );
 
   return {
-    attribute: reward.attribute,
-    amount: reward.amount,
-    attributes: user.attributes,
+    attribute:
+      reward.attribute,
+
+    amount:
+      reward.amount,
+
+    attributes:
+      user.attributes,
   };
 };
 

@@ -1,3 +1,5 @@
+const mongoose = require("mongoose");
+
 const Task = require("../models/task.model");
 
 const {
@@ -19,6 +21,10 @@ const {
 const {
   createCompletionLog,
 } = require("../services/completionLog.service");
+
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
 
 const getTasks = async (req, res) => {
   try {
@@ -55,7 +61,18 @@ const createTask = async (req, res) => {
       category,
     } = req.body;
 
-    if (!title || !category) {
+    if (
+      typeof title !== "string" ||
+      typeof category !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Title and category must be valid strings",
+      });
+    }
+
+    if (!title.trim() || !category.trim()) {
       return res.status(400).json({
         success: false,
         message:
@@ -63,12 +80,24 @@ const createTask = async (req, res) => {
       });
     }
 
+    if (
+      description !== undefined &&
+      typeof description !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Description must be a valid string",
+      });
+    }
+
     const task = await Task.create({
       user: req.user.userId,
       title: title.trim(),
-      description: description
-        ? description.trim()
-        : "",
+      description:
+        description !== undefined
+          ? description.trim()
+          : "",
       category: category.trim(),
     });
 
@@ -93,8 +122,17 @@ const createTask = async (req, res) => {
 
 const getTaskById = async (req, res) => {
   try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task ID",
+      });
+    }
+
     const task = await Task.findOne({
-      _id: req.params.id,
+      _id: id,
       user: req.user.userId,
     });
 
@@ -132,8 +170,50 @@ const updateTask = async (req, res) => {
       category,
     } = req.body;
 
+    if (
+      title !== undefined &&
+      typeof title !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Title must be a valid string",
+      });
+    }
+
+    if (
+      description !== undefined &&
+      typeof description !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Description must be a valid string",
+      });
+    }
+
+    if (
+      category !== undefined &&
+      typeof category !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Category must be a valid string",
+      });
+    }
+
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task ID",
+      });
+    }
+
     const task = await Task.findOne({
-      _id: req.params.id,
+      _id: id,
       user: req.user.userId,
     });
 
@@ -197,8 +277,17 @@ const updateTask = async (req, res) => {
 
 const deleteTask = async (req, res) => {
   try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid task ID",
+      });
+    }
+
     const task = await Task.findOne({
-      _id: req.params.id,
+      _id: id,
       user: req.user.userId,
     });
 
@@ -232,75 +321,112 @@ const deleteTask = async (req, res) => {
 };
 
 const completeTask = async (req, res) => {
+  const session =
+    await mongoose.startSession();
+
   try {
-    const task = await Task.findOne({
-      _id: req.params.id,
-      user: req.user.userId,
-    });
+    const { id } = req.params;
 
-    if (!task) {
-      return res.status(404).json({
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({
         success: false,
-        message: "Task not found",
+        message: "Invalid task ID",
       });
     }
 
-    if (task.completed) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "Task is already completed",
-      });
-    }
+    let completionResult;
 
-    task.completed = true;
-    task.completedAt = new Date();
+    await session.withTransaction(
+      async () => {
+        const task = await Task.findOne({
+          _id: id,
+          user: req.user.userId,
+        }).session(session);
 
-    await task.save();
+        if (!task) {
+          const error =
+            new Error("Task not found");
 
-    const xpResult =
-      await awardTaskCompletionXP(
-        req.user.userId
-      );
+          error.statusCode = 404;
 
-    const streakResult =
-      await updateUserStreak(
-        req.user.userId
-      );
+          throw error;
+        }
 
-    const attributeResult =
-      await updateUserAttribute(
-        req.user.userId,
-        task.category
-      );
+        if (task.completed) {
+          const error =
+            new Error(
+              "Task is already completed"
+            );
 
-    const economyResult =
-      await awardTaskCompletionCurrency(
-        req.user.userId
-      );
+          error.statusCode = 409;
 
-    const completionLog =
-      await createCompletionLog({
-        userId: req.user.userId,
-        task,
-        xpAwarded:
-          xpResult.xpAwarded,
-        currencyAwarded:
-          economyResult.currencyAwarded,
-        attribute:
-          attributeResult,
-      });
+          throw error;
+        }
+
+        task.completed = true;
+        task.completedAt = new Date();
+
+        await task.save({
+          session,
+        });
+
+        const xpResult =
+          await awardTaskCompletionXP(
+            req.user.userId,
+            session
+          );
+
+        const streakResult =
+          await updateUserStreak(
+            req.user.userId,
+            session
+          );
+
+        const attributeResult =
+          await updateUserAttribute(
+            req.user.userId,
+            task.category,
+            session
+          );
+
+        const economyResult =
+          await awardTaskCompletionCurrency(
+            req.user.userId,
+            session
+          );
+
+        const completionLog =
+          await createCompletionLog(
+            {
+              userId:
+                req.user.userId,
+              task,
+              xpAwarded:
+                xpResult.xpAwarded,
+              currencyAwarded:
+                economyResult.currencyAwarded,
+              attribute:
+                attributeResult,
+            },
+            session
+          );
+
+        completionResult = {
+          task,
+          xp: xpResult,
+          streak: streakResult,
+          attribute:
+            attributeResult,
+          economy:
+            economyResult,
+          completionLog,
+        };
+      }
+    );
 
     return res.status(200).json({
       success: true,
-      data: {
-        task,
-        xp: xpResult,
-        streak: streakResult,
-        attribute: attributeResult,
-        economy: economyResult,
-        completionLog,
-      },
+      data: completionResult,
     });
   } catch (error) {
     console.error(
@@ -308,10 +434,21 @@ const completeTask = async (req, res) => {
       error.message
     );
 
+    if (error.statusCode) {
+      return res.status(
+        error.statusCode
+      ).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Something went wrong",
     });
+  } finally {
+    await session.endSession();
   }
 };
 

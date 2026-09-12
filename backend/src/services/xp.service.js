@@ -1,10 +1,21 @@
 const User = require("../models/user.model");
-const { updateUserLevel } = require("./level.service");
+const {
+  updateUserLevel,
+} = require("./level.service");
 
 const TASK_COMPLETION_XP = 10;
 
-const awardTaskCompletionXP = async (userId) => {
-  const user = await User.findById(userId);
+const awardTaskCompletionXP = async (
+  userId,
+  session = null
+) => {
+  const query = User.findById(userId);
+
+  if (session) {
+    query.session(session);
+  }
+
+  const user = await query;
 
   if (!user) {
     throw new Error("User not found");
@@ -12,17 +23,31 @@ const awardTaskCompletionXP = async (userId) => {
 
   user.xp += TASK_COMPLETION_XP;
 
-  const previousLevel = user.level;
+  const previousLevel =
+    user.level;
 
-  await user.save();
+  await user.save(
+    session ? { session } : undefined
+  );
 
-  const levelResult = await updateUserLevel(user);
+  const levelResult =
+    await updateUserLevel(
+      user,
+      session
+    );
 
   return {
-    xpAwarded: TASK_COMPLETION_XP,
+    xpAwarded:
+      TASK_COMPLETION_XP,
+
     totalXP: user.xp,
-    level: levelResult.level,
-    leveledUp: levelResult.level > previousLevel,
+
+    level:
+      levelResult.level,
+
+    leveledUp:
+      levelResult.level >
+      previousLevel,
   };
 };
 

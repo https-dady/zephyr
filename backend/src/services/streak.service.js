@@ -1,24 +1,46 @@
 const User = require("../models/user.model");
 
-const isSameCalendarDay = (date1, date2) => {
+const isSameCalendarDay = (
+  date1,
+  date2
+) => {
   return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
+    date1.getFullYear() ===
+      date2.getFullYear() &&
+    date1.getMonth() ===
+      date2.getMonth() &&
+    date1.getDate() ===
+      date2.getDate()
   );
 };
 
-const isConsecutiveDay = (previousDate, currentDate) => {
-  const previous = new Date(previousDate);
+const isConsecutiveDay = (
+  previousDate,
+  currentDate
+) => {
+  const previous =
+    new Date(previousDate);
 
-  previous.setHours(0, 0, 0, 0);
+  previous.setHours(
+    0,
+    0,
+    0,
+    0
+  );
 
-  const current = new Date(currentDate);
+  const current =
+    new Date(currentDate);
 
-  current.setHours(0, 0, 0, 0);
+  current.setHours(
+    0,
+    0,
+    0,
+    0
+  );
 
   const difference =
-    current.getTime() - previous.getTime();
+    current.getTime() -
+    previous.getTime();
 
   const oneDay =
     24 * 60 * 60 * 1000;
@@ -26,8 +48,17 @@ const isConsecutiveDay = (previousDate, currentDate) => {
   return difference === oneDay;
 };
 
-const updateUserStreak = async (userId) => {
-  const user = await User.findById(userId);
+const updateUserStreak = async (
+  userId,
+  session = null
+) => {
+  const query = User.findById(userId);
+
+  if (session) {
+    query.session(session);
+  }
+
+  const user = await query;
 
   if (!user) {
     throw new Error("User not found");
@@ -42,13 +73,20 @@ const updateUserStreak = async (userId) => {
   if (!lastCompletedAt) {
     user.streak.current = 1;
     user.streak.longest = 1;
-    user.streak.lastCompletedAt = now;
+    user.streak.lastCompletedAt =
+      now;
 
-    await user.save();
+    await user.save(
+      session ? { session } : undefined
+    );
 
     return {
-      current: user.streak.current,
-      longest: user.streak.longest,
+      current:
+        user.streak.current,
+
+      longest:
+        user.streak.longest,
+
       lastCompletedAt:
         user.streak.lastCompletedAt,
     };
@@ -62,8 +100,12 @@ const updateUserStreak = async (userId) => {
     )
   ) {
     return {
-      current: user.streak.current,
-      longest: user.streak.longest,
+      current:
+        user.streak.current,
+
+      longest:
+        user.streak.longest,
+
       lastCompletedAt:
         user.streak.lastCompletedAt,
     };
@@ -90,13 +132,20 @@ const updateUserStreak = async (userId) => {
     user.streak.current = 1;
   }
 
-  user.streak.lastCompletedAt = now;
+  user.streak.lastCompletedAt =
+    now;
 
-  await user.save();
+  await user.save(
+    session ? { session } : undefined
+  );
 
   return {
-    current: user.streak.current,
-    longest: user.streak.longest,
+    current:
+      user.streak.current,
+
+    longest:
+      user.streak.longest,
+
     lastCompletedAt:
       user.streak.lastCompletedAt,
   };

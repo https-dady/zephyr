@@ -2,22 +2,43 @@ const User = require("../models/user.model");
 
 const TASK_COMPLETION_CURRENCY = 5;
 
-const awardTaskCompletionCurrency = async (userId) => {
-  const user = await User.findById(userId);
+const awardTaskCompletionCurrency =
+  async (
+    userId,
+    session = null
+  ) => {
+    const query =
+      User.findById(userId);
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+    if (session) {
+      query.session(session);
+    }
 
-  user.currency += TASK_COMPLETION_CURRENCY;
+    const user = await query;
 
-  await user.save();
+    if (!user) {
+      throw new Error(
+        "User not found"
+      );
+    }
 
-  return {
-    currencyAwarded: TASK_COMPLETION_CURRENCY,
-    totalCurrency: user.currency,
+    user.currency +=
+      TASK_COMPLETION_CURRENCY;
+
+    await user.save(
+      session
+        ? { session }
+        : undefined
+    );
+
+    return {
+      currencyAwarded:
+        TASK_COMPLETION_CURRENCY,
+
+      totalCurrency:
+        user.currency,
+    };
   };
-};
 
 module.exports = {
   TASK_COMPLETION_CURRENCY,
