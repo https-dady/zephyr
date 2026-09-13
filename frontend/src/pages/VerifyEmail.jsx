@@ -14,7 +14,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://zephyr-1-8h6x.onrender.com/";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESEND_COOLDOWN_STORAGE_KEY =

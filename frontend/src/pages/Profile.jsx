@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://zephyr-1-8h6x.onrender.com/";
 
 const ATTRIBUTE_CONFIG = [
   {

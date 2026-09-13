@@ -46,7 +46,7 @@ function Login() {
       const email = formData.email.trim();
 
       const response = await fetch(
-        "http://localhost:5000/api/auth/login",
+        "https://zephyr-1-8h6x.onrender.com/",
         {
           method: "POST",
           headers: {
