@@ -1,6 +1,10 @@
-const { Resend } = require("resend");
+const { BrevoClient } = require("@getbrevo/brevo");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const brevo = new BrevoClient({
+  apiKey: process.env.BREVO_API_KEY,
+  timeoutInSeconds: 30,
+  maxRetries: 1,
+});
 
 const sendOTPEmail = async ({
   email,
@@ -22,48 +26,84 @@ const sendOTPEmail = async ({
     ? "Use the OTP below to verify your Life RPG account."
     : "Use the OTP below to reset your Life RPG password.";
 
-  const { data, error } = await resend.emails.send({
-    from: "Life RPG <onboarding@resend.dev>",
-    to: [email],
-    subject,
+  try {
+    const result = await brevo.transactionalEmails.sendTransacEmail({
+      sender: {
+        name: "Life RPG",
+        email: process.env.EMAIL_USER,
+      },
 
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto;">
-        <h2>${title}</h2>
+      to: [
+        {
+          email,
+          name,
+        },
+      ],
 
-        <p>Hi ${name},</p>
+      subject,
 
-        <p>${message}</p>
+      htmlContent: `
+        <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto;">
+          <h2>${title}</h2>
 
-        <div style="
-          font-size: 32px;
-          font-weight: bold;
-          letter-spacing: 8px;
-          padding: 20px;
-          background: #f5f5f5;
-          text-align: center;
-          margin: 24px 0;
-        ">
-          ${otp}
+          <p>Hi ${name},</p>
+
+          <p>${message}</p>
+
+          <div style="
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            padding: 20px;
+            background: #f5f5f5;
+            text-align: center;
+            margin: 24px 0;
+          ">
+            ${otp}
+          </div>
+
+          <p>This OTP is valid for 10 minutes.</p>
+
+          <p>If you did not request this, you can safely ignore this email.</p>
+
+          <p>— Life RPG</p>
         </div>
+      `,
 
-        <p>This OTP is valid for 10 minutes.</p>
+      textContent: `
+${title}
 
-        <p>If you did not request this, you can safely ignore this email.</p>
+Hi ${name},
 
-        <p>— Life RPG</p>
-      </div>
-    `,
-  });
+${message}
 
-  if (error) {
-    console.error("Resend email error:", error);
-    throw new Error(error.message || "Failed to send OTP email");
+Your OTP: ${otp}
+
+This OTP is valid for 10 minutes.
+
+If you did not request this, you can safely ignore this email.
+
+— Life RPG
+      `,
+    });
+
+    console.log(
+      "OTP email sent successfully:",
+      result?.messageId
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Brevo email error:", {
+      statusCode: error?.statusCode,
+      message: error?.message,
+      body: error?.body,
+    });
+
+    throw new Error(
+      error?.message || "Failed to send OTP email"
+    );
   }
-
-  console.log("OTP email sent successfully:", data?.id);
-
-  return data;
 };
 
 module.exports = {
