@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import Container from "../components/Container";
 import Button from "../components/Button";
+import API_BASE_URL from "../config/api";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESEND_COOLDOWN_STORAGE_KEY =
@@ -61,8 +62,8 @@ function Signup() {
     try {
       const email = formData.email.trim();
 
-      const response = await fetch(
-        "https://zephyr-1-8h6x.onrender.com/",
+     const response = await fetch(
+  `${API_BASE_URL}/auth/signup`,
         {
           method: "POST",
           headers: {

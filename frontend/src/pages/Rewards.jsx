@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
-const API_BASE_URL = "https://zephyr-1-8h6x.onrender.com/";
+import API_BASE_URL from "../config/api";
 
 const REWARD_TYPES = [
   {

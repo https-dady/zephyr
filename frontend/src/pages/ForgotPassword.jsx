@@ -4,8 +4,7 @@ import { motion } from "framer-motion";
 
 import Container from "../components/Container";
 
-const API_BASE_URL = "https://zephyr-1-8h6x.onrender.com/";
-
+import API_BASE_URL from "../config/api";
 const AUTH_EASE = [0.22, 1, 0.36, 1];
 
 const CARD_SPRING = {

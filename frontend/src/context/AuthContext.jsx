@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "https://zephyr-1-8h6x.onrender.com/";
+import API_BASE_URL from "../config/api";
 
 const AuthContext = createContext(null);
 

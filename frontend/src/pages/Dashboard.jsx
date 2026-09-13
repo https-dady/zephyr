@@ -4,8 +4,7 @@ import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE_URL = "https://zephyr-1-8h6x.onrender.com/";
-
+import API_BASE_URL from "../config/api";
 const DASHBOARD_EASE = [0.22, 1, 0.36, 1];
 
 const dashboardReveal = {

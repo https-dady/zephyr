@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Container from "../components/Container";
 import Button from "../components/Button";
 import { useAuth } from "../context/AuthContext";
+import API_BASE_URL from "../config/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ function Login() {
       const email = formData.email.trim();
 
       const response = await fetch(
-        "https://zephyr-1-8h6x.onrender.com/",
+        `${API_BASE_URL}/auth/login`,
         {
           method: "POST",
           headers: {
