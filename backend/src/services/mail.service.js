@@ -1,4 +1,9 @@
+const dns = require("node:dns");
 const nodemailer = require("nodemailer");
+
+// Render production environment may prefer IPv6 DNS results,
+// but the current SMTP connection needs to use IPv4.
+dns.setDefaultResultOrder("ipv4first");
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -14,6 +19,7 @@ const transporter = nodemailer.createTransport({
   connectionTimeout: 30000,
   greetingTimeout: 30000,
   socketTimeout: 60000,
+  dnsTimeout: 30000,
 });
 
 const sendOTPEmail = async ({
