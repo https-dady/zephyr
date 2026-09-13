@@ -1,26 +1,6 @@
-const dns = require("node:dns");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-// Render production environment may prefer IPv6 DNS results,
-// but the current SMTP connection needs to use IPv4.
-dns.setDefaultResultOrder("ipv4first");
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  requireTLS: true,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 60000,
-  dnsTimeout: 30000,
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendOTPEmail = async ({
   email,
@@ -42,9 +22,9 @@ const sendOTPEmail = async ({
     ? "Use the OTP below to verify your Life RPG account."
     : "Use the OTP below to reset your Life RPG password.";
 
-  await transporter.sendMail({
-    from: `"Life RPG" <${process.env.EMAIL_USER}>`,
-    to: email,
+  const { data, error } = await resend.emails.send({
+    from: "Life RPG <onboarding@resend.dev>",
+    to: [email],
     subject,
 
     html: `
@@ -75,6 +55,15 @@ const sendOTPEmail = async ({
       </div>
     `,
   });
+
+  if (error) {
+    console.error("Resend email error:", error);
+    throw new Error(error.message || "Failed to send OTP email");
+  }
+
+  console.log("OTP email sent successfully:", data?.id);
+
+  return data;
 };
 
 module.exports = {
